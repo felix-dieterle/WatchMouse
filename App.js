@@ -21,6 +21,13 @@ export default function App() {
   const [newSearchQuery, setNewSearchQuery] = useState('');
   const [newSearchMaxPrice, setNewSearchMaxPrice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Search and filter states
+  const [searchFilter, setSearchFilter] = useState('');
+  const [matchFilter, setMatchFilter] = useState('');
+  const [searchSort, setSearchSort] = useState('date-desc'); // date-desc, date-asc, name-asc, name-desc
+  const [matchSort, setMatchSort] = useState('date-desc'); // date-desc, date-asc, price-asc, price-desc, title-asc
+  const [platformFilter, setPlatformFilter] = useState('all'); // all, eBay, Kleinanzeigen
 
   useEffect(() => {
     loadSearches();
@@ -90,6 +97,86 @@ export default function App() {
   const deleteSearch = (searchId) => {
     const updatedSearches = searches.filter(s => s.id !== searchId);
     saveSearches(updatedSearches);
+  };
+
+  const clearAllMatches = () => {
+    Alert.alert(
+      'Clear All Matches',
+      'Are you sure you want to clear all matches?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', onPress: () => saveMatches([]) },
+      ]
+    );
+  };
+
+  // Filter and sort searches
+  const getFilteredAndSortedSearches = () => {
+    let filtered = searches;
+    
+    // Apply search filter
+    if (searchFilter.trim()) {
+      const filterLower = searchFilter.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.query.toLowerCase().includes(filterLower)
+      );
+    }
+    
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (searchSort) {
+        case 'date-asc':
+          return new Date(a.createdAt) - new Date(b.createdAt);
+        case 'date-desc':
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        case 'name-asc':
+          return a.query.localeCompare(b.query);
+        case 'name-desc':
+          return b.query.localeCompare(a.query);
+        default:
+          return 0;
+      }
+    });
+    
+    return sorted;
+  };
+
+  // Filter and sort matches
+  const getFilteredAndSortedMatches = () => {
+    let filtered = matches;
+    
+    // Apply platform filter
+    if (platformFilter !== 'all') {
+      filtered = filtered.filter(m => m.platform === platformFilter);
+    }
+    
+    // Apply search filter
+    if (matchFilter.trim()) {
+      const filterLower = matchFilter.toLowerCase();
+      filtered = filtered.filter(m => 
+        m.title.toLowerCase().includes(filterLower)
+      );
+    }
+    
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (matchSort) {
+        case 'date-asc':
+          return new Date(a.foundAt) - new Date(b.foundAt);
+        case 'date-desc':
+          return new Date(b.foundAt) - new Date(a.foundAt);
+        case 'price-asc':
+          return a.price - b.price;
+        case 'price-desc':
+          return b.price - a.price;
+        case 'title-asc':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+    
+    return sorted;
   };
 
   const runSearch = async (search) => {
@@ -170,7 +257,7 @@ export default function App() {
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Saved Searches</Text>
+            <Text style={styles.sectionTitle}>Saved Searches ({searches.length})</Text>
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => setShowAddSearch(!showAddSearch)}
@@ -202,26 +289,127 @@ export default function App() {
             </View>
           )}
 
+          {/* Search filter and sort */}
+          <View style={styles.filterSection}>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Filter searches..."
+              value={searchFilter}
+              onChangeText={setSearchFilter}
+            />
+            <View style={styles.sortButtons}>
+              <TouchableOpacity
+                style={[styles.sortButton, searchSort === 'date-desc' && styles.sortButtonActive]}
+                onPress={() => setSearchSort('date-desc')}
+              >
+                <Text style={[styles.sortButtonText, searchSort === 'date-desc' && styles.sortButtonTextActive]}>Newest</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, searchSort === 'date-asc' && styles.sortButtonActive]}
+                onPress={() => setSearchSort('date-asc')}
+              >
+                <Text style={[styles.sortButtonText, searchSort === 'date-asc' && styles.sortButtonTextActive]}>Oldest</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, searchSort === 'name-asc' && styles.sortButtonActive]}
+                onPress={() => setSearchSort('name-asc')}
+              >
+                <Text style={[styles.sortButtonText, searchSort === 'name-asc' && styles.sortButtonTextActive]}>A-Z</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <FlatList
-            data={searches}
+            data={getFilteredAndSortedSearches()}
             renderItem={renderSearchItem}
             keyExtractor={item => item.id}
             scrollEnabled={false}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No saved searches yet</Text>
+              <Text style={styles.emptyText}>
+                {searchFilter ? 'No searches match your filter' : 'No saved searches yet'}
+              </Text>
             }
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Matches</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Matches ({matches.length})</Text>
+            {matches.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={clearAllMatches}
+              >
+                <Text style={styles.buttonText}>Clear All</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Match filter and sort */}
+          <View style={styles.filterSection}>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Filter matches..."
+              value={matchFilter}
+              onChangeText={setMatchFilter}
+            />
+            <View style={styles.sortButtons}>
+              <TouchableOpacity
+                style={[styles.sortButton, platformFilter === 'all' && styles.sortButtonActive]}
+                onPress={() => setPlatformFilter('all')}
+              >
+                <Text style={[styles.sortButtonText, platformFilter === 'all' && styles.sortButtonTextActive]}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, platformFilter === 'eBay' && styles.sortButtonActive]}
+                onPress={() => setPlatformFilter('eBay')}
+              >
+                <Text style={[styles.sortButtonText, platformFilter === 'eBay' && styles.sortButtonTextActive]}>eBay</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, platformFilter === 'Kleinanzeigen' && styles.sortButtonActive]}
+                onPress={() => setPlatformFilter('Kleinanzeigen')}
+              >
+                <Text style={[styles.sortButtonText, platformFilter === 'Kleinanzeigen' && styles.sortButtonTextActive]}>Klein.</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.sortButtons}>
+              <TouchableOpacity
+                style={[styles.sortButton, matchSort === 'date-desc' && styles.sortButtonActive]}
+                onPress={() => setMatchSort('date-desc')}
+              >
+                <Text style={[styles.sortButtonText, matchSort === 'date-desc' && styles.sortButtonTextActive]}>Newest</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, matchSort === 'price-asc' && styles.sortButtonActive]}
+                onPress={() => setMatchSort('price-asc')}
+              >
+                <Text style={[styles.sortButtonText, matchSort === 'price-asc' && styles.sortButtonTextActive]}>Price ↑</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, matchSort === 'price-desc' && styles.sortButtonActive]}
+                onPress={() => setMatchSort('price-desc')}
+              >
+                <Text style={[styles.sortButtonText, matchSort === 'price-desc' && styles.sortButtonTextActive]}>Price ↓</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, matchSort === 'title-asc' && styles.sortButtonActive]}
+                onPress={() => setMatchSort('title-asc')}
+              >
+                <Text style={[styles.sortButtonText, matchSort === 'title-asc' && styles.sortButtonTextActive]}>A-Z</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <FlatList
-            data={matches.slice(-10).reverse()}
+            data={getFilteredAndSortedMatches()}
             renderItem={renderMatchItem}
-            keyExtractor={(item, index) => index.toString()}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
             scrollEnabled={false}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No matches found yet</Text>
+              <Text style={styles.emptyText}>
+                {matchFilter || platformFilter !== 'all' ? 'No matches match your filter' : 'No matches found yet'}
+              </Text>
             }
           />
         </View>
@@ -392,5 +580,48 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  filterSection: {
+    marginBottom: 15,
+  },
+  filterInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
+  },
+  sortButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 5,
+  },
+  sortButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+  sortButtonActive: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
+  },
+  sortButtonText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  sortButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  clearButton: {
+    backgroundColor: '#ff9800',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 5,
   },
 });
