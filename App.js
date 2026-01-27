@@ -520,19 +520,21 @@ const styles = StyleSheet.create({
   },
   searchActions: {
     flexDirection: 'row',
-    gap: 8,
+    marginLeft: -4,
   },
   runButton: {
     backgroundColor: '#2196F3',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 5,
+    marginLeft: 4,
   },
   deleteButton: {
     backgroundColor: '#f44336',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 5,
+    marginLeft: 4,
   },
   matchItem: {
     padding: 12,
@@ -595,8 +597,9 @@ const styles = StyleSheet.create({
   sortButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
     marginBottom: 5,
+    marginLeft: -4,
+    marginRight: -4,
   },
   sortButton: {
     paddingHorizontal: 12,
@@ -605,6 +608,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#fff',
+    marginLeft: 4,
+    marginRight: 4,
+    marginBottom: 4,
   },
   sortButtonActive: {
     backgroundColor: '#2196F3',
