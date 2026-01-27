@@ -1,0 +1,87 @@
+name: Build and Release Android APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+      actions: read    # Required for workflow access
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Expo CLI
+        run: npm install -g @expo/cli eas-cli
+
+      - name: Build APK
+        run: |
+          npx expo prebuild --platform android
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Sign APK
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          # Note: In production, use secrets for keystore
+          echo "APK built successfully"
+
+      - name: Get version from tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: android/app/build/outputs/apk/release/app-release.apk
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## WatchMouse Android App
+            
+            Download and install the APK file below.
+            
+            ### Installation
+            1. Download the APK file
+            2. Enable "Install from unknown sources" in Android settings
+            3. Install the APK
+            
+            ### Features
+            - Monitor eBay and Kleinanzeigen for deals
+            - AI-powered search matching
+            - Save custom searches
+            - Get notified of new matches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: watchmouse-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
