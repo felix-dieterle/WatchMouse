@@ -10,6 +10,14 @@ A smart Android app that monitors shopping platforms (eBay, Kleinanzeigen) and f
 - 📱 **Android App**: Native mobile experience built with React Native/Expo
 - 🔔 **Deal Notifications**: Get notified when new matching items are found
 - 🏷️ **Multi-Platform Support**: Currently supports eBay and Kleinanzeigen
+- 🔎 **Advanced Search & Filter**: Filter and sort your saved searches and matches
+  - Search/filter saved searches by query text
+  - Search/filter matches by title
+  - Sort searches by date or name
+  - Sort matches by date, price, or title
+  - Filter matches by platform (eBay, Kleinanzeigen)
+  - View search and match counts
+  - Clear all matches with one tap
 
 ## Installation
 
@@ -57,6 +65,11 @@ For eBay integration (future):
 2. **Run Search**: Tap "Run" on any saved search to check for new matches
 3. **View Matches**: See recent matches in the "Recent Matches" section
 4. **Manage Searches**: Delete searches you no longer need
+5. **Filter & Sort**: 
+   - Use the filter box to search within saved searches or matches
+   - Tap sort buttons to organize by date, name, or price
+   - Filter matches by platform (eBay or Kleinanzeigen)
+   - Clear all matches when needed
 
 ## Architecture
 
