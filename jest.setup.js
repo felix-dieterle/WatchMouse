@@ -6,9 +6,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   clear: jest.fn(),
 }));
 
-// Suppress console warnings in tests
-global.console = {
-  ...console,
-  warn: jest.fn(),
-  error: jest.fn(),
-};
+// Suppress console warnings and errors in tests
+jest.spyOn(console, 'warn').mockImplementation(() => {});
+jest.spyOn(console, 'error').mockImplementation(() => {});

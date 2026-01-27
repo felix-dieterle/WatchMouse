@@ -50,7 +50,9 @@ describe('SearchService', () => {
       const results = await searchService.searchAllPlatforms('test');
       
       const platforms = [...new Set(results.map(r => r.platform))];
-      expect(platforms.length).toBeGreaterThanOrEqual(1);
+      expect(platforms.length).toBe(2);
+      expect(platforms).toContain('eBay');
+      expect(platforms).toContain('Kleinanzeigen');
     });
   });
 
