@@ -62,10 +62,11 @@ class EbaySearcher {
       { title: `${query} with accessories`, price: 180 },
     ];
 
+    const timestamp = Date.now();
     return mockItems
       .filter(item => !maxPrice || item.price <= maxPrice)
       .map((item, idx) => ({
-        id: `${platform}-${Date.now()}-${idx}`,
+        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
         title: item.title,
         price: item.price,
         platform: platform,
@@ -96,10 +97,11 @@ class KleinanzeigenSearcher {
       { title: `Verkaufe ${query}`, price: 140 },
     ];
 
+    const timestamp = Date.now();
     return mockItems
       .filter(item => !maxPrice || item.price <= maxPrice)
       .map((item, idx) => ({
-        id: `${platform}-${Date.now()}-${idx}`,
+        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
         title: item.title,
         price: item.price,
         platform: platform,

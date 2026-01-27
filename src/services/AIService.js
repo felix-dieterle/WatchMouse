@@ -88,6 +88,11 @@ Indices of matching results:`;
       }
     );
 
+    // Validate response structure
+    if (!response.data?.choices?.[0]?.message?.content) {
+      throw new Error('Invalid API response structure');
+    }
+
     return response.data.choices[0].message.content;
   }
 
@@ -99,7 +104,7 @@ Indices of matching results:`;
       // Extract numbers from the response
       const indices = aiResponse
         .split(',')
-        .map(s => parseInt(s.trim()))
+        .map(s => parseInt(s.trim(), 10))
         .filter(n => !isNaN(n) && n >= 0 && n < results.length);
 
       return indices.map(i => results[i]);

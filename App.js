@@ -74,7 +74,7 @@ export default function App() {
     }
 
     const newSearch = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       query: newSearchQuery,
       maxPrice: newSearchMaxPrice ? parseFloat(newSearchMaxPrice) : null,
       createdAt: new Date().toISOString(),

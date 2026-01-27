@@ -33,7 +33,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Expo CLI
-        run: npm install -g expo-cli eas-cli
+        run: npm install -g @expo/cli eas-cli
 
       - name: Build APK
         run: |
