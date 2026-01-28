@@ -16,7 +16,10 @@ A smart Android app that monitors shopping platforms (eBay, Kleinanzeigen) and f
   - Sort searches by date or name
   - Sort matches by date, price, or title
   - Filter matches by platform (eBay, Kleinanzeigen)
-  - View search and match counts
+  - Filter matches by read/unread status
+  - Mark matches as read/unread to track what you've reviewed
+  - Mark all matches as read with one tap
+  - View search and match counts (including unread count)
   - Clear all matches with one tap
 
 ## Installation
@@ -64,11 +67,13 @@ For eBay integration (future):
 1. **Add a Search**: Tap "Add Search" and enter your search query and optional max price
 2. **Run Search**: Tap "Run" on any saved search to check for new matches
 3. **View Matches**: See recent matches in the "Recent Matches" section
-4. **Manage Searches**: Delete searches you no longer need
-5. **Filter & Sort**: 
+4. **Track What You've Seen**: Tap "Mark Read" on individual matches or "Mark All Read" to track reviewed items
+5. **Manage Searches**: Delete searches you no longer need
+6. **Filter & Sort**: 
    - Use the filter box to search within saved searches or matches
    - Tap sort buttons to organize by date, name, or price
    - Filter matches by platform (eBay or Kleinanzeigen)
+   - Filter matches by read/unread status to focus on new items
    - Clear all matches when needed
 
 ## Architecture
@@ -131,6 +136,12 @@ MIT License - see LICENSE file for details
 
 ## Roadmap
 
+### Implemented ✅
+- [x] Mark matches as read/seen to track reviewed items
+- [x] Filter matches by read/unread status
+- [x] Advanced search and filter features
+
+### Planned
 - [ ] Push notifications for new matches
 - [ ] Background search scheduling
 - [ ] More platform support (Amazon, etc.)

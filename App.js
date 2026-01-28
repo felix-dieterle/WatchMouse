@@ -28,6 +28,7 @@ export default function App() {
   const [searchSort, setSearchSort] = useState('date-desc'); // date-desc, date-asc, name-asc, name-desc
   const [matchSort, setMatchSort] = useState('date-desc'); // date-desc, date-asc, price-asc, price-desc, title-asc
   const [platformFilter, setPlatformFilter] = useState('all'); // all, eBay, Kleinanzeigen
+  const [readFilter, setReadFilter] = useState('all'); // all, unread, read
 
   useEffect(() => {
     loadSearches();
@@ -49,7 +50,13 @@ export default function App() {
     try {
       const savedMatches = await AsyncStorage.getItem('matches');
       if (savedMatches) {
-        setMatches(JSON.parse(savedMatches));
+        const matches = JSON.parse(savedMatches);
+        // Migration: add isRead property to existing matches that don't have it
+        const migratedMatches = matches.map(m => ({
+          ...m,
+          isRead: m.isRead !== undefined ? m.isRead : false
+        }));
+        setMatches(migratedMatches);
       }
     } catch (error) {
       console.error('Error loading matches:', error);
@@ -110,6 +117,18 @@ export default function App() {
     );
   };
 
+  const toggleMatchRead = (matchId) => {
+    const updatedMatches = matches.map(m => 
+      m.id === matchId ? { ...m, isRead: !m.isRead } : m
+    );
+    saveMatches(updatedMatches);
+  };
+
+  const markAllAsRead = () => {
+    const updatedMatches = matches.map(m => ({ ...m, isRead: true }));
+    saveMatches(updatedMatches);
+  };
+
   // Filter and sort searches
   const getFilteredAndSortedSearches = () => {
     let filtered = searches;
@@ -148,6 +167,13 @@ export default function App() {
     // Apply platform filter
     if (platformFilter !== 'all') {
       filtered = filtered.filter(m => m.platform === platformFilter);
+    }
+    
+    // Apply read/unread filter
+    if (readFilter !== 'all') {
+      filtered = filtered.filter(m => 
+        readFilter === 'unread' ? !m.isRead : m.isRead
+      );
     }
     
     // Apply search filter
@@ -194,6 +220,7 @@ export default function App() {
         ...result,
         searchId: search.id,
         foundAt: new Date().toISOString(),
+        isRead: false, // Mark new matches as unread
       }));
       
       const updatedMatches = [...matches, ...newMatches];
@@ -235,15 +262,30 @@ export default function App() {
   );
 
   const renderMatchItem = ({ item }) => (
-    <View style={styles.matchItem}>
-      <Text style={styles.matchTitle}>{item.title}</Text>
-      <Text style={styles.matchPrice}>€{item.price}</Text>
-      <Text style={styles.matchPlatform}>{item.platform}</Text>
-      <Text style={styles.matchDate}>
-        Found: {new Date(item.foundAt).toLocaleDateString()}
-      </Text>
+    <View style={[styles.matchItem, item.isRead && styles.matchItemRead]}>
+      <View style={styles.matchContent}>
+        <Text style={[styles.matchTitle, item.isRead && styles.matchTitleRead]}>
+          {item.title}
+        </Text>
+        <Text style={styles.matchPrice}>€{item.price}</Text>
+        <Text style={styles.matchPlatform}>{item.platform}</Text>
+        <Text style={styles.matchDate}>
+          Found: {new Date(item.foundAt).toLocaleDateString()}
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={styles.readToggleButton}
+        onPress={() => toggleMatchRead(item.id)}
+      >
+        <Text style={styles.readToggleText}>
+          {item.isRead ? '✓ Read' : '○ Mark Read'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
+
+  // Calculate counts for UI
+  const unreadCount = matches.filter(m => !m.isRead).length;
 
   return (
     <View style={styles.container}>
@@ -334,14 +376,25 @@ export default function App() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Matches ({matches.length})</Text>
+            <Text style={styles.sectionTitle}>
+              Recent Matches ({matches.length})
+              {unreadCount > 0 && ` · ${unreadCount} unread`}
+            </Text>
             {matches.length > 0 && (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearAllMatches}
-              >
-                <Text style={styles.buttonText}>Clear All</Text>
-              </TouchableOpacity>
+              <View style={styles.headerButtons}>
+                <TouchableOpacity
+                  style={styles.markAllReadButton}
+                  onPress={markAllAsRead}
+                >
+                  <Text style={styles.buttonText}>Mark All Read</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={clearAllMatches}
+                >
+                  <Text style={styles.buttonText}>Clear All</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -371,6 +424,26 @@ export default function App() {
                 onPress={() => setPlatformFilter('Kleinanzeigen')}
               >
                 <Text style={[styles.sortButtonText, platformFilter === 'Kleinanzeigen' && styles.sortButtonTextActive]}>Klein.</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.sortButtons}>
+              <TouchableOpacity
+                style={[styles.sortButton, readFilter === 'all' && styles.sortButtonActive]}
+                onPress={() => setReadFilter('all')}
+              >
+                <Text style={[styles.sortButtonText, readFilter === 'all' && styles.sortButtonTextActive]}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, readFilter === 'unread' && styles.sortButtonActive]}
+                onPress={() => setReadFilter('unread')}
+              >
+                <Text style={[styles.sortButtonText, readFilter === 'unread' && styles.sortButtonTextActive]}>Unread</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, readFilter === 'read' && styles.sortButtonActive]}
+                onPress={() => setReadFilter('read')}
+              >
+                <Text style={[styles.sortButtonText, readFilter === 'read' && styles.sortButtonTextActive]}>Read</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.sortButtons}>
@@ -408,7 +481,9 @@ export default function App() {
             scrollEnabled={false}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
-                {matchFilter || platformFilter !== 'all' ? 'No matches match your filter' : 'No matches found yet'}
+                {matchFilter || platformFilter !== 'all' || readFilter !== 'all' 
+                  ? 'No matches match your filter' 
+                  : 'No matches found yet'}
               </Text>
             }
           />
@@ -629,5 +704,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 5,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+  },
+  markAllReadButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  matchItemRead: {
+    backgroundColor: '#f9f9f9',
+    opacity: 0.7,
+  },
+  matchTitleRead: {
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  matchContent: {
+    flex: 1,
+  },
+  readToggleButton: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    alignSelf: 'flex-start',
+  },
+  readToggleText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
   },
 });
