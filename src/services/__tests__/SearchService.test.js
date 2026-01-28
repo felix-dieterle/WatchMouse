@@ -124,8 +124,8 @@ describe('SearchService', () => {
   });
 
   describe('eBay API integration', () => {
-    beforeEach(() => {
-      // Reset environment variable
+    afterEach(() => {
+      // Clean up environment variable after each test
       delete process.env.EBAY_API_KEY;
     });
 
@@ -139,9 +139,6 @@ describe('SearchService', () => {
     });
 
     it('should call eBay API when API key is configured', async () => {
-      // Set API key
-      process.env.EBAY_API_KEY = 'test-api-key';
-      
       // Mock successful API response
       const mockResponse = {
         data: {
@@ -187,11 +184,11 @@ describe('SearchService', () => {
       
       axios.get.mockResolvedValue(mockResponse);
       
-      // Create new searcher with API key
-      const ebaySearcher = searchService.platforms.ebay;
-      ebaySearcher.apiKey = 'test-api-key';
+      // Create new service with API key to test environment variable flow
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
       
-      const results = await ebaySearcher.search('iPhone', 800);
+      const results = await testSearcher.search('iPhone', 800);
       
       expect(axios.get).toHaveBeenCalledTimes(1);
       expect(results).toBeDefined();
@@ -207,15 +204,13 @@ describe('SearchService', () => {
     });
 
     it('should fall back to mock data when API call fails', async () => {
-      process.env.EBAY_API_KEY = 'test-api-key';
-      
       // Mock API error
       axios.get.mockRejectedValue(new Error('Network error'));
       
-      const ebaySearcher = searchService.platforms.ebay;
-      ebaySearcher.apiKey = 'test-api-key';
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
       
-      const results = await ebaySearcher.search('iPhone', 200);
+      const results = await testSearcher.search('iPhone', 200);
       
       expect(results).toBeDefined();
       expect(Array.isArray(results)).toBe(true);
@@ -224,8 +219,6 @@ describe('SearchService', () => {
     });
 
     it('should handle empty API response gracefully', async () => {
-      process.env.EBAY_API_KEY = 'test-api-key';
-      
       // Mock empty API response
       const mockResponse = {
         data: {
@@ -239,17 +232,15 @@ describe('SearchService', () => {
       
       axios.get.mockResolvedValue(mockResponse);
       
-      const ebaySearcher = searchService.platforms.ebay;
-      ebaySearcher.apiKey = 'test-api-key';
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
       
-      const results = await ebaySearcher.search('nonexistent-product-xyz', 100);
+      const results = await testSearcher.search('nonexistent-product-xyz', 100);
       
       expect(results).toEqual([]);
     });
 
     it('should include price filter in API request when maxPrice is specified', async () => {
-      process.env.EBAY_API_KEY = 'test-api-key';
-      
       const mockResponse = {
         data: {
           findItemsByKeywordsResponse: [{
@@ -262,16 +253,26 @@ describe('SearchService', () => {
       
       axios.get.mockResolvedValue(mockResponse);
       
-      const ebaySearcher = searchService.platforms.ebay;
-      ebaySearcher.apiKey = 'test-api-key';
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
       
-      await ebaySearcher.search('iPhone', 500);
+      await testSearcher.search('iPhone', 500);
       
       expect(axios.get).toHaveBeenCalledTimes(1);
       const callUrl = axios.get.mock.calls[0][0];
       expect(callUrl).toContain('itemFilter');
       expect(callUrl).toContain('MaxPrice');
       expect(callUrl).toContain('500');
+    });
+
+    it('should skip API call for empty query', async () => {
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
+      
+      const results = await testSearcher.search('', 100);
+      
+      expect(axios.get).not.toHaveBeenCalled();
+      expect(results).toEqual([]);
     });
   });
 });

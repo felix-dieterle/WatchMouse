@@ -75,13 +75,18 @@ class EbaySearcher {
   }
 
   async searchWithAPI(query, maxPrice) {
+    // Validate query
+    if (!query || query.trim() === '') {
+      console.log('eBay: Empty query, skipping API call');
+      return [];
+    }
+
     // Build eBay Finding API request
     const params = {
       'OPERATION-NAME': 'findItemsByKeywords',
       'SERVICE-VERSION': '1.0.0',
       'SECURITY-APPNAME': this.apiKey,
       'RESPONSE-DATA-FORMAT': 'JSON',
-      'REST-PAYLOAD': true,
       'keywords': query,
       'paginationInput.entriesPerPage': '20',
       'sortOrder': 'StartTimeNewest',
@@ -100,8 +105,10 @@ class EbaySearcher {
     const queryString = new URLSearchParams(params).toString();
     const url = `${this.baseUrl}?${queryString}`;
 
-    // Make API request
-    const response = await axios.get(url);
+    // Make API request with timeout
+    const response = await axios.get(url, {
+      timeout: 10000, // 10 second timeout
+    });
     
     // Parse response
     return this.parseAPIResponse(response.data, query);
@@ -122,6 +129,9 @@ class EbaySearcher {
       
       console.log(`eBay: Found ${count} items for query "${query}"`);
 
+      // Generate timestamp once for all items in this batch
+      const batchTimestamp = Date.now();
+
       // Transform eBay items to our format
       return items.map(item => {
         const itemId = item.itemId?.[0] || '';
@@ -133,7 +143,8 @@ class EbaySearcher {
         const location = item.location?.[0] || '';
 
         return {
-          id: `eBay-${itemId}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          // Use eBay item ID as base for uniqueness
+          id: `eBay-${itemId}-${Math.random().toString(36).slice(2, 11)}`,
           title: title,
           price: price,
           currency: currency,
@@ -141,7 +152,7 @@ class EbaySearcher {
           url: url,
           condition: condition,
           location: location,
-          timestamp: new Date().toISOString(),
+          timestamp: new Date(batchTimestamp).toISOString(),
         };
       });
     } catch (error) {
