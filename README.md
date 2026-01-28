@@ -159,6 +159,11 @@ For development builds, simply merge to main - the APK will be built automatical
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+For more information, see:
+- [docs/EBAY_API_GUIDE.md](docs/EBAY_API_GUIDE.md) - Complete eBay API integration guide
+- [docs/API_CONFIGURATION.md](docs/API_CONFIGURATION.md) - API setup and configuration
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture overview
+
 ## License
 
 MIT License - see LICENSE file for details
