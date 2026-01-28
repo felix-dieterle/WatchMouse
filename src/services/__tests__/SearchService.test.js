@@ -7,13 +7,67 @@ describe('SearchService', () => {
     searchService = new SearchService();
   });
 
+  describe('initialization', () => {
+    it('should initialize with default platform settings (all enabled)', () => {
+      expect(searchService.platformSettings).toEqual({
+        ebayEnabled: true,
+        kleinanzeigenEnabled: true,
+      });
+    });
+
+    it('should accept custom platform settings', () => {
+      const customService = new SearchService({
+        ebayEnabled: false,
+        kleinanzeigenEnabled: true,
+      });
+      expect(customService.platformSettings).toEqual({
+        ebayEnabled: false,
+        kleinanzeigenEnabled: true,
+      });
+    });
+  });
+
   describe('searchAllPlatforms', () => {
-    it('should return results from all platforms', async () => {
+    it('should return results from all enabled platforms', async () => {
       const results = await searchService.searchAllPlatforms('iPhone');
       
       expect(results).toBeDefined();
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
+    });
+
+    it('should only search eBay when Kleinanzeigen is disabled', async () => {
+      const ebayOnlyService = new SearchService({
+        ebayEnabled: true,
+        kleinanzeigenEnabled: false,
+      });
+      const results = await ebayOnlyService.searchAllPlatforms('test');
+      
+      const platforms = [...new Set(results.map(r => r.platform))];
+      expect(platforms).toContain('eBay');
+      expect(platforms).not.toContain('Kleinanzeigen');
+    });
+
+    it('should only search Kleinanzeigen when eBay is disabled', async () => {
+      const kleinanzeigenOnlyService = new SearchService({
+        ebayEnabled: false,
+        kleinanzeigenEnabled: true,
+      });
+      const results = await kleinanzeigenOnlyService.searchAllPlatforms('test');
+      
+      const platforms = [...new Set(results.map(r => r.platform))];
+      expect(platforms).toContain('Kleinanzeigen');
+      expect(platforms).not.toContain('eBay');
+    });
+
+    it('should return empty array when all platforms are disabled', async () => {
+      const noPlatformsService = new SearchService({
+        ebayEnabled: false,
+        kleinanzeigenEnabled: false,
+      });
+      const results = await noPlatformsService.searchAllPlatforms('test');
+      
+      expect(results).toEqual([]);
     });
 
     it('should filter by max price when provided', async () => {

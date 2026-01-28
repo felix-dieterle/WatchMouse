@@ -6,6 +6,9 @@ A smart Android app that monitors shopping platforms (eBay, Kleinanzeigen) and f
 
 - 🔍 **Smart Search Monitoring**: Save your search queries and let WatchMouse monitor multiple platforms
 - 🤖 **AI-Powered Matching**: Uses AI (via OpenRouter) to find relevant items even with typos or variations
+  - Automatically falls back to keyword matching when no API key is configured
+- ⚙️ **Configurable Settings**: Easy-to-use settings screen to manage API keys and platform preferences
+- 🔧 **Module System**: Enable/disable individual platforms (eBay, Kleinanzeigen) as needed
 - 💰 **Price Filtering**: Set maximum price limits for your searches
 - 📱 **Android App**: Native mobile experience built with React Native/Expo
 - 🔔 **Deal Notifications**: Get notified when new matching items are found
@@ -51,7 +54,26 @@ cd android
 
 ## Configuration
 
-### API Keys
+### Settings Screen
+
+The app includes a settings screen accessible via the gear icon (⚙️) in the top-right corner of the home screen. Here you can configure:
+
+#### AI Configuration
+- **OpenRouter API Key**: Enter your API key from [OpenRouter](https://openrouter.ai/)
+  - With a valid API key: AI-powered matching for better search results
+  - Without an API key: Falls back to basic keyword matching
+  - The app displays a warning banner when no API key is configured
+
+#### Platform Modules
+- **eBay**: Enable/disable searching on eBay platform
+- **Kleinanzeigen**: Enable/disable searching on Kleinanzeigen platform
+- At least one platform must be enabled
+
+All settings are saved locally on your device using AsyncStorage.
+
+### API Keys (Legacy Configuration)
+
+For advanced users, API keys can also be set via environment variables:
 
 The app uses OpenRouter for AI-powered search matching. To use the AI features:
 
@@ -64,12 +86,15 @@ For eBay integration (future):
 
 ## Usage
 
-1. **Add a Search**: Tap "Add Search" and enter your search query and optional max price
-2. **Run Search**: Tap "Run" on any saved search to check for new matches
-3. **View Matches**: See recent matches in the "Recent Matches" section
-4. **Track What You've Seen**: Tap "Mark Read" on individual matches or "Mark All Read" to track reviewed items
-5. **Manage Searches**: Delete searches you no longer need
-6. **Filter & Sort**: 
+1. **Configure Settings**: Tap the gear icon (⚙️) to open settings
+   - Add your OpenRouter API key for AI-powered matching (optional but recommended)
+   - Enable/disable platforms (eBay, Kleinanzeigen) as needed
+2. **Add a Search**: Tap "Add Search" and enter your search query and optional max price
+3. **Run Search**: Tap "Run" on any saved search to check for new matches
+4. **View Matches**: See recent matches in the "Recent Matches" section
+5. **Track What You've Seen**: Tap "Mark Read" on individual matches or "Mark All Read" to track reviewed items
+6. **Manage Searches**: Delete searches you no longer need
+7. **Filter & Sort**: 
    - Use the filter box to search within saved searches or matches
    - Tap sort buttons to organize by date, name, or price
    - Filter matches by platform (eBay or Kleinanzeigen)
@@ -82,12 +107,15 @@ For eBay integration (future):
 WatchMouse/
 ├── App.js                 # Main app component
 ├── src/
+│   ├── components/
+│   │   └── Settings.js          # Settings screen component
 │   └── services/
-│       ├── AIService.js        # AI matching logic
-│       └── SearchService.js    # Platform search integration
+│       ├── AIService.js         # AI matching logic
+│       ├── SearchService.js     # Platform search integration
+│       └── SettingsService.js   # Settings persistence
 ├── .github/
 │   └── workflows/
-│       └── build-apk.yml       # CI/CD for APK builds
+│       └── build-apk.yml        # CI/CD for APK builds
 ├── package.json
 └── app.json
 ```

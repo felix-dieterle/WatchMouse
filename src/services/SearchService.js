@@ -4,7 +4,14 @@ import axios from 'axios';
  * Service for searching across multiple shopping platforms
  */
 export class SearchService {
-  constructor() {
+  constructor(platformSettings = {}) {
+    // Platform settings determine which platforms are enabled
+    // Default to all enabled if not specified
+    this.platformSettings = {
+      ebayEnabled: platformSettings.ebayEnabled !== undefined ? platformSettings.ebayEnabled : true,
+      kleinanzeigenEnabled: platformSettings.kleinanzeigenEnabled !== undefined ? platformSettings.kleinanzeigenEnabled : true,
+    };
+    
     this.platforms = {
       ebay: new EbaySearcher(),
       kleinanzeigen: new KleinanzeigenSearcher(),
@@ -12,25 +19,29 @@ export class SearchService {
   }
 
   /**
-   * Search all platforms and combine results
+   * Search all enabled platforms and combine results
    */
   async searchAllPlatforms(query, maxPrice = null) {
     const results = [];
 
-    try {
-      // Search eBay
-      const ebayResults = await this.platforms.ebay.search(query, maxPrice);
-      results.push(...ebayResults);
-    } catch (error) {
-      console.error('eBay search error:', error);
+    // Only search eBay if enabled
+    if (this.platformSettings.ebayEnabled) {
+      try {
+        const ebayResults = await this.platforms.ebay.search(query, maxPrice);
+        results.push(...ebayResults);
+      } catch (error) {
+        console.error('eBay search error:', error);
+      }
     }
 
-    try {
-      // Search Kleinanzeigen
-      const kleinanzeigenResults = await this.platforms.kleinanzeigen.search(query, maxPrice);
-      results.push(...kleinanzeigenResults);
-    } catch (error) {
-      console.error('Kleinanzeigen search error:', error);
+    // Only search Kleinanzeigen if enabled
+    if (this.platformSettings.kleinanzeigenEnabled) {
+      try {
+        const kleinanzeigenResults = await this.platforms.kleinanzeigen.search(query, maxPrice);
+        results.push(...kleinanzeigenResults);
+      } catch (error) {
+        console.error('Kleinanzeigen search error:', error);
+      }
     }
 
     return results;
@@ -66,7 +77,7 @@ class EbaySearcher {
     return mockItems
       .filter(item => !maxPrice || item.price <= maxPrice)
       .map((item, idx) => ({
-        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
         title: item.title,
         price: item.price,
         platform: platform,
@@ -101,7 +112,7 @@ class KleinanzeigenSearcher {
     return mockItems
       .filter(item => !maxPrice || item.price <= maxPrice)
       .map((item, idx) => ({
-        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
         title: item.title,
         price: item.price,
         platform: platform,

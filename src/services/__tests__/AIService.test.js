@@ -13,6 +13,38 @@ describe('AIService', () => {
       expect(aiService.baseUrl).toBe('https://openrouter.ai/api/v1');
       expect(aiService.model).toBe('openai/gpt-3.5-turbo');
     });
+
+    it('should accept API key in constructor', () => {
+      const serviceWithKey = new AIService('test-api-key-123');
+      expect(serviceWithKey.apiKey).toBe('test-api-key-123');
+    });
+
+    it('should use empty string when no API key provided', () => {
+      const serviceNoKey = new AIService();
+      expect(serviceNoKey.apiKey).toBe('');
+    });
+  });
+
+  describe('hasValidApiKey', () => {
+    it('should return true when API key is set', () => {
+      const serviceWithKey = new AIService('valid-key');
+      expect(serviceWithKey.hasValidApiKey()).toBe(true);
+    });
+
+    it('should return false when API key is empty', () => {
+      const serviceNoKey = new AIService('');
+      expect(serviceNoKey.hasValidApiKey()).toBe(false);
+    });
+
+    it('should return false when API key is only whitespace', () => {
+      const serviceWhitespace = new AIService('   ');
+      expect(serviceWhitespace.hasValidApiKey()).toBe(false);
+    });
+
+    it('should return false when no API key provided', () => {
+      const serviceDefault = new AIService();
+      expect(serviceDefault.hasValidApiKey()).toBe(false);
+    });
   });
 
   describe('fallbackFilter', () => {
