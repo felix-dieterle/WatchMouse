@@ -8,19 +8,28 @@ import {
   TextInput,
   Alert,
   FlatList,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SearchService } from './src/services/SearchService';
 import { AIService } from './src/services/AIService';
+import { SettingsService } from './src/services/SettingsService';
+import Settings from './src/components/Settings';
 
 export default function App() {
   const [searches, setSearches] = useState([]);
   const [matches, setMatches] = useState([]);
   const [showAddSearch, setShowAddSearch] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [newSearchQuery, setNewSearchQuery] = useState('');
   const [newSearchMaxPrice, setNewSearchMaxPrice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [settings, setSettings] = useState({
+    openrouterApiKey: '',
+    ebayEnabled: true,
+    kleinanzeigenEnabled: true,
+  });
   
   // Search and filter states
   const [searchFilter, setSearchFilter] = useState('');
@@ -31,9 +40,19 @@ export default function App() {
   const [readFilter, setReadFilter] = useState('all'); // all, unread, read
 
   useEffect(() => {
+    loadSettings();
     loadSearches();
     loadMatches();
   }, []);
+
+  const loadSettings = async () => {
+    const loadedSettings = await SettingsService.loadSettings();
+    setSettings(loadedSettings);
+  };
+
+  const handleSettingsChange = (newSettings) => {
+    setSettings(newSettings);
+  };
 
   const loadSearches = async () => {
     try {
@@ -208,11 +227,15 @@ export default function App() {
   const runSearch = async (search) => {
     setIsLoading(true);
     try {
-      const searchService = new SearchService();
+      // Create SearchService with platform settings
+      const searchService = new SearchService({
+        ebayEnabled: settings.ebayEnabled,
+        kleinanzeigenEnabled: settings.kleinanzeigenEnabled,
+      });
       const results = await searchService.searchAllPlatforms(search.query, search.maxPrice);
       
-      // Filter results using AI
-      const aiService = new AIService();
+      // Filter results using AI (with API key from settings)
+      const aiService = new AIService(settings.openrouterApiKey);
       const matchedResults = await aiService.filterMatches(search.query, results);
       
       // Save new matches
@@ -226,10 +249,12 @@ export default function App() {
       const updatedMatches = [...matches, ...newMatches];
       saveMatches(updatedMatches);
       
-      Alert.alert('Success', `Found ${matchedResults.length} new matches!`);
+      const aiEnabled = aiService.hasValidApiKey();
+      const aiStatus = aiEnabled ? '(AI-powered)' : '(keyword matching)';
+      Alert.alert('Success', `Found ${matchedResults.length} new matches! ${aiStatus}`);
     } catch (error) {
       console.error('Error running search:', error);
-      Alert.alert('Error', 'Failed to run search. Please check your API configuration.');
+      Alert.alert('Error', 'Failed to run search. Please check your configuration.');
     } finally {
       setIsLoading(false);
     }
@@ -292,9 +317,35 @@ export default function App() {
       <StatusBar style="auto" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>WatchMouse</Text>
-        <Text style={styles.subtitle}>Shopping Deal Monitor</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.title}>WatchMouse</Text>
+            <Text style={styles.subtitle}>Shopping Deal Monitor</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setShowSettings(true)}
+          >
+            <Text style={styles.settingsButtonText}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
+        {!settings.openrouterApiKey && (
+          <View style={styles.warningBanner}>
+            <Text style={styles.warningText}>⚠ No API key - Using basic keyword matching</Text>
+          </View>
+        )}
       </View>
+
+      <Modal
+        visible={showSettings}
+        animationType="slide"
+        onRequestClose={() => setShowSettings(false)}
+      >
+        <Settings
+          onClose={() => setShowSettings(false)}
+          onSettingsChange={handleSettingsChange}
+        />
+      </Modal>
 
       <ScrollView style={styles.content}>
         <View style={styles.section}>
@@ -506,9 +557,14 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#2196F3',
-    padding: 20,
     paddingTop: 50,
+    paddingBottom: 15,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 28,
@@ -519,6 +575,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#fff',
     marginTop: 5,
+  },
+  settingsButton: {
+    padding: 8,
+  },
+  settingsButtonText: {
+    fontSize: 28,
+  },
+  warningBanner: {
+    backgroundColor: '#ff9800',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  warningText: {
+    color: '#fff',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   content: {
     flex: 1,

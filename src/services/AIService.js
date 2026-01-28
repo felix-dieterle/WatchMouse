@@ -4,12 +4,20 @@ import axios from 'axios';
  * AI Service for filtering and matching search results using OpenRouter API
  */
 export class AIService {
-  constructor() {
+  constructor(apiKey = null) {
     // OpenRouter API configuration
-    // Users should set their API key in environment or config
-    this.apiKey = process.env.OPENROUTER_API_KEY || '';
+    // Accept API key from settings or environment
+    this.apiKey = apiKey || process.env.OPENROUTER_API_KEY || '';
     this.baseUrl = 'https://openrouter.ai/api/v1';
     this.model = 'openai/gpt-3.5-turbo'; // Using a cheaper model
+  }
+
+  /**
+   * Check if AI service has a valid API key configured
+   * @returns {boolean} True if API key is present
+   */
+  hasValidApiKey() {
+    return this.apiKey && this.apiKey.trim().length > 0;
   }
 
   /**
@@ -19,8 +27,8 @@ export class AIService {
    * @returns {Array} Filtered array of matching results
    */
   async filterMatches(searchQuery, results) {
-    if (!this.apiKey) {
-      console.warn('No OpenRouter API key configured. Returning all results.');
+    if (!this.hasValidApiKey()) {
+      console.warn('No OpenRouter API key configured. Using fallback keyword matching.');
       // Fallback to simple keyword matching
       return this.fallbackFilter(searchQuery, results);
     }
