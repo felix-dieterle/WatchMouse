@@ -6,7 +6,7 @@
 
 /**
  * Simple in-memory cache with TTL support
- * Thread-safe cache for storing API responses and computed values
+ * Safe for single-threaded JavaScript environments
  */
 export class Cache {
   constructor(maxSize = 50) {

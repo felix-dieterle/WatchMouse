@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS } from '../constants';
+import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS, CACHE_CONFIG } from '../constants';
 import { redactSensitiveData } from '../utils/security';
 import { Cache } from '../utils/performance';
 
 // Initialize cache for search results
-const searchCache = new Cache(API_CONFIG.EBAY.RESULTS_PER_PAGE);
+const searchCache = new Cache(CACHE_CONFIG.MAX_CACHE_SIZE);
 
 /**
  * Service for searching across multiple shopping platforms
@@ -86,7 +86,7 @@ class EbaySearcher {
     try {
       const results = await this.searchWithAPI(query, maxPrice);
       // Cache the results
-      searchCache.set(cacheKey, results, 5 * 60 * 1000); // 5 min cache
+      searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
       return results;
     } catch (error) {
       console.error('eBay API error, falling back to mock data:', redactSensitiveData(error.message || ''));
