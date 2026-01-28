@@ -3,18 +3,28 @@ import axios from 'axios';
 /**
  * Utility function to redact sensitive data from error messages
  * Prevents API keys from appearing in logs or crash reports
+ * Only redacts when specific sensitive patterns are detected
  */
 function redactSensitiveData(message) {
   if (typeof message !== 'string') {
     return message;
   }
   
-  // Redact anything that looks like an API key (long alphanumeric strings)
-  // This regex matches common API key patterns
-  return message.replace(/([A-Za-z0-9]{20,})/g, (match) => {
-    // Show first 4 characters and mask the rest
-    return match.substring(0, 4) + '****';
-  });
+  // Redact only when we detect common API key indicators in the message
+  // This reduces false positives while still protecting sensitive data
+  const hasApiKeyIndicator = /api[_-]?key|token|secret|auth|bearer/i.test(message);
+  
+  if (!hasApiKeyIndicator) {
+    return message;
+  }
+  
+  // Redact alphanumeric strings that appear after key indicators
+  return message.replace(
+    /(api[_-]?key|token|secret|auth|bearer)[:\s=]+([A-Za-z0-9_-]{10,})/gi,
+    (match, prefix, key) => {
+      return `${prefix}: ${key.substring(0, 4)}****`;
+    }
+  );
 }
 
 /**

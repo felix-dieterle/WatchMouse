@@ -66,7 +66,12 @@ export const SettingsService = {
         await SecureStore.setItemAsync(SECURE_OPENROUTER_KEY, openrouterApiKey);
       } else {
         // Delete the key if it's empty
-        await SecureStore.deleteItemAsync(SECURE_OPENROUTER_KEY);
+        try {
+          await SecureStore.deleteItemAsync(SECURE_OPENROUTER_KEY);
+        } catch (deleteError) {
+          // Ignore errors when deleting non-existent keys
+          console.log('No secure key to delete or deletion failed:', deleteError.message);
+        }
       }
       
       return true;
