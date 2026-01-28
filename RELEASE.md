@@ -55,7 +55,7 @@ The release workflow (`.github/workflows/build-apk.yml`) triggers on:
 **Development Releases** (automatic):
 - Triggered automatically on every push to main branch
 - Creates a pre-release in the releases section
-- APK named: `watchmouse-dev-YYYYMMDD-HHMMSS.apk`
+- APK named: `watchmouse-dev-YYYYMMDD-HHMMSS-<commit>.apk`
 - Marked as pre-release with commit information
 - Allows users to download the latest development version
 
@@ -82,8 +82,8 @@ The release workflow (`.github/workflows/build-apk.yml`) triggers on:
 Development builds are automatically created on every push to main:
 
 - **Automatic Pre-releases**: Every push to main creates a pre-release in the releases section
-- **Naming**: `dev-YYYYMMDD-HHMMSS` (e.g., `dev-20260128-142530`)
-- **APK**: Available as `watchmouse-dev-YYYYMMDD-HHMMSS.apk`
+- **Naming**: `dev-YYYYMMDD-HHMMSS-<commit>` (e.g., `dev-20260128-142530-a1b2c3d`)
+- **APK**: Available as `watchmouse-dev-YYYYMMDD-HHMMSS-<commit>.apk`
 - **Visibility**: Appears in the releases section marked as "Pre-release"
 - **Also available**: As workflow artifacts in the Actions tab (30 days retention)
 
