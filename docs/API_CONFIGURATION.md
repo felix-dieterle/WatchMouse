@@ -30,14 +30,52 @@ OpenRouter offers various models with different pricing:
 
 WatchMouse is configured to use GPT-3.5-turbo by default, which is very cost-effective for this use case.
 
-## eBay API Setup (Optional)
+## eBay API Setup
 
-Currently, WatchMouse uses mock data for demonstration. To integrate with real eBay data:
+WatchMouse now supports real eBay search results using the eBay Finding API. The app automatically falls back to mock data when no API key is configured.
+
+### Getting an eBay API Key
 
 1. Visit [eBay Developers](https://developer.ebay.com/)
-2. Create a developer account
-3. Generate an API key (Application ID)
-4. Add the key to your `.env` file
+2. Create a free developer account
+3. Create an application in the Developer Dashboard
+4. Generate an Application ID (App ID)
+5. Copy the Application ID
+
+### Using the API Key
+
+**For Development:**
+1. Copy `.env.example` to `.env`
+2. Replace `your_ebay_api_key_here` with your Application ID
+3. Restart the app
+
+**For Production APK:**
+The API key should be configured through environment variables before building the APK.
+
+### eBay Finding API
+
+The app uses eBay's Finding API which is free to use with the following features:
+- **findItemsByKeywords**: Search for items by keywords
+- **Price filtering**: Filter results by maximum price
+- **Sorting**: Results are sorted by newest listings first
+- **Rate limits**: 5,000 calls per day (free tier)
+- **Global sites**: Supports all eBay global sites (default: EBAY-DE for Germany)
+
+### API Response Details
+
+When the API is configured, the app retrieves real-time data including:
+- Item title
+- Current price and currency
+- Item URL (direct link to eBay listing)
+- Condition (New, Used, etc.)
+- Location
+- Timestamp
+
+### Fallback Behavior
+
+- **No API key**: Uses mock data for demonstration
+- **API error**: Automatically falls back to mock data
+- **No results**: Returns empty array
 
 ## Kleinanzeigen
 

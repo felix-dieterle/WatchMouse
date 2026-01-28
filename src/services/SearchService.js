@@ -56,12 +56,98 @@ class EbaySearcher {
     // Using eBay Finding API (requires API key for production)
     this.apiKey = process.env.EBAY_API_KEY || '';
     this.baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
+    this.globalId = 'EBAY-DE'; // Default to German eBay
   }
 
   async search(query, maxPrice) {
-    // Mock implementation - in production, use real eBay API
-    // For now, return mock data for demonstration
-    return this.getMockResults(query, maxPrice, 'eBay');
+    // If no API key is configured, fall back to mock data
+    if (!this.apiKey) {
+      console.log('eBay: No API key configured, using mock data');
+      return this.getMockResults(query, maxPrice, 'eBay');
+    }
+
+    try {
+      return await this.searchWithAPI(query, maxPrice);
+    } catch (error) {
+      console.error('eBay API error, falling back to mock data:', error.message);
+      return this.getMockResults(query, maxPrice, 'eBay');
+    }
+  }
+
+  async searchWithAPI(query, maxPrice) {
+    // Build eBay Finding API request
+    const params = {
+      'OPERATION-NAME': 'findItemsByKeywords',
+      'SERVICE-VERSION': '1.0.0',
+      'SECURITY-APPNAME': this.apiKey,
+      'RESPONSE-DATA-FORMAT': 'JSON',
+      'REST-PAYLOAD': true,
+      'keywords': query,
+      'paginationInput.entriesPerPage': '20',
+      'sortOrder': 'StartTimeNewest',
+      'GLOBAL-ID': this.globalId,
+    };
+
+    // Add price filter if specified
+    if (maxPrice) {
+      params['itemFilter(0).name'] = 'MaxPrice';
+      params['itemFilter(0).value'] = maxPrice.toString();
+      params['itemFilter(0).paramName'] = 'Currency';
+      params['itemFilter(0).paramValue'] = 'EUR';
+    }
+
+    // Build query string
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.baseUrl}?${queryString}`;
+
+    // Make API request
+    const response = await axios.get(url);
+    
+    // Parse response
+    return this.parseAPIResponse(response.data, query);
+  }
+
+  parseAPIResponse(data, query) {
+    try {
+      // eBay API returns data in a specific structure
+      const searchResult = data.findItemsByKeywordsResponse?.[0]?.searchResult?.[0];
+      
+      if (!searchResult || !searchResult.item) {
+        console.log('eBay: No items found in response');
+        return [];
+      }
+
+      const items = searchResult.item;
+      const count = searchResult['@count'];
+      
+      console.log(`eBay: Found ${count} items for query "${query}"`);
+
+      // Transform eBay items to our format
+      return items.map(item => {
+        const itemId = item.itemId?.[0] || '';
+        const title = item.title?.[0] || 'No title';
+        const price = parseFloat(item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__ || 0);
+        const currency = item.sellingStatus?.[0]?.currentPrice?.[0]?.['@currencyId'] || 'EUR';
+        const url = item.viewItemURL?.[0] || `https://www.ebay.de/itm/${itemId}`;
+        const condition = item.condition?.[0]?.conditionDisplayName?.[0] || '';
+        const location = item.location?.[0] || '';
+
+        return {
+          id: `eBay-${itemId}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          title: title,
+          price: price,
+          currency: currency,
+          platform: 'eBay',
+          url: url,
+          condition: condition,
+          location: location,
+          timestamp: new Date().toISOString(),
+        };
+      });
+    } catch (error) {
+      console.error('Error parsing eBay API response:', error);
+      return [];
+    }
   }
 
   getMockResults(query, maxPrice, platform) {
