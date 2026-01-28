@@ -1,10 +1,16 @@
 import { SearchService } from '../SearchService';
 
+// Mock axios for eBay API tests
+jest.mock('axios');
+const axios = require('axios');
+
 describe('SearchService', () => {
   let searchService;
 
   beforeEach(() => {
     searchService = new SearchService();
+    // Clear all mocks before each test
+    jest.clearAllMocks();
   });
 
   describe('initialization', () => {
@@ -114,6 +120,159 @@ describe('SearchService', () => {
     it('should have both eBay and Kleinanzeigen platforms configured', () => {
       expect(searchService.platforms).toHaveProperty('ebay');
       expect(searchService.platforms).toHaveProperty('kleinanzeigen');
+    });
+  });
+
+  describe('eBay API integration', () => {
+    afterEach(() => {
+      // Clean up environment variable after each test
+      delete process.env.EBAY_API_KEY;
+    });
+
+    it('should use mock data when no API key is configured', async () => {
+      const results = await searchService.platforms.ebay.search('iPhone', 200);
+      
+      expect(results).toBeDefined();
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0]).toHaveProperty('platform', 'eBay');
+    });
+
+    it('should call eBay API when API key is configured', async () => {
+      // Mock successful API response
+      const mockResponse = {
+        data: {
+          findItemsByKeywordsResponse: [{
+            searchResult: [{
+              '@count': '2',
+              item: [
+                {
+                  itemId: ['123456789'],
+                  title: ['iPhone 13 Pro'],
+                  sellingStatus: [{
+                    currentPrice: [{
+                      __value__: '699.99',
+                      '@currencyId': 'EUR'
+                    }]
+                  }],
+                  viewItemURL: ['https://www.ebay.de/itm/123456789'],
+                  condition: [{
+                    conditionDisplayName: ['New']
+                  }],
+                  location: ['Berlin, Germany']
+                },
+                {
+                  itemId: ['987654321'],
+                  title: ['iPhone 12 Used'],
+                  sellingStatus: [{
+                    currentPrice: [{
+                      __value__: '499.99',
+                      '@currencyId': 'EUR'
+                    }]
+                  }],
+                  viewItemURL: ['https://www.ebay.de/itm/987654321'],
+                  condition: [{
+                    conditionDisplayName: ['Used']
+                  }],
+                  location: ['Munich, Germany']
+                }
+              ]
+            }]
+          }]
+        }
+      };
+      
+      axios.get.mockResolvedValue(mockResponse);
+      
+      // Create new service with API key to test environment variable flow
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
+      
+      const results = await testSearcher.search('iPhone', 800);
+      
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(results).toBeDefined();
+      expect(results.length).toBe(2);
+      expect(results[0]).toMatchObject({
+        title: 'iPhone 13 Pro',
+        price: 699.99,
+        currency: 'EUR',
+        platform: 'eBay',
+        condition: 'New',
+        location: 'Berlin, Germany'
+      });
+    });
+
+    it('should fall back to mock data when API call fails', async () => {
+      // Mock API error
+      axios.get.mockRejectedValue(new Error('Network error'));
+      
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
+      
+      const results = await testSearcher.search('iPhone', 200);
+      
+      expect(results).toBeDefined();
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0]).toHaveProperty('platform', 'eBay');
+    });
+
+    it('should handle empty API response gracefully', async () => {
+      // Mock empty API response
+      const mockResponse = {
+        data: {
+          findItemsByKeywordsResponse: [{
+            searchResult: [{
+              '@count': '0'
+            }]
+          }]
+        }
+      };
+      
+      axios.get.mockResolvedValue(mockResponse);
+      
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
+      
+      const results = await testSearcher.search('nonexistent-product-xyz', 100);
+      
+      expect(results).toEqual([]);
+    });
+
+    it('should include price filter in API request when maxPrice is specified', async () => {
+      const mockResponse = {
+        data: {
+          findItemsByKeywordsResponse: [{
+            searchResult: [{
+              '@count': '0'
+            }]
+          }]
+        }
+      };
+      
+      axios.get.mockResolvedValue(mockResponse);
+      
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
+      
+      await testSearcher.search('iPhone', 500);
+      
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      const callUrl = axios.get.mock.calls[0][0];
+      expect(callUrl).toContain('itemFilter');
+      expect(callUrl).toContain('MaxPrice');
+      expect(callUrl).toContain('500');
+    });
+
+    it('should skip API call for empty query', async () => {
+      process.env.EBAY_API_KEY = 'test-api-key';
+      const testSearcher = new SearchService().platforms.ebay;
+      
+      const results = await testSearcher.search('', 100);
+      
+      expect(axios.get).not.toHaveBeenCalled();
+      expect(results).toEqual([]);
     });
   });
 });

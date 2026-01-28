@@ -80,9 +80,10 @@ The app uses OpenRouter for AI-powered search matching. To use the AI features:
 1. Get an API key from [OpenRouter](https://openrouter.ai/)
 2. Set the environment variable: `OPENROUTER_API_KEY=your_key_here`
 
-For eBay integration (future):
+For eBay integration:
 - Get an API key from [eBay Developers](https://developer.ebay.com/)
 - Set `EBAY_API_KEY=your_key_here`
+- Without an API key, eBay searches fall back to mock data
 
 ## Usage
 
@@ -157,6 +158,11 @@ For development builds, simply merge to main - the APK will be built automatical
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+For more information, see:
+- [docs/EBAY_API_GUIDE.md](docs/EBAY_API_GUIDE.md) - Complete eBay API integration guide
+- [docs/API_CONFIGURATION.md](docs/API_CONFIGURATION.md) - API setup and configuration
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture overview
 
 ## License
 

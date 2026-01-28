@@ -19,7 +19,8 @@ WatchMouse is a complete Android application for monitoring shopping platforms (
 - Persistent storage of searches
 
 ✅ **Multi-Platform Search**
-- eBay integration (currently with mock data)
+- eBay integration with real-time API (eBay Finding API)
+- Automatic fallback to mock data when API key not configured
 - Kleinanzeigen integration (currently with mock data)
 - Extensible architecture for adding more platforms
 
@@ -110,19 +111,21 @@ WatchMouse/
 - `@react-navigation/native`: ^7.0.0 (Navigation ready)
 
 ### Mock Data Approach
-Current implementation uses mock data for:
-- eBay search results
-- Kleinanzeigen search results
+The app provides automatic fallback to mock data:
+- **eBay**: Uses Finding API when API key is configured, otherwise mock data
+- **Kleinanzeigen**: Currently uses mock data (no public API available)
 
 This allows the app to be demonstrated and tested without requiring:
 - API keys (for initial setup)
 - Compliance with platform ToS
 - Network connectivity for basic testing
 
-Real integration can be added by:
-1. Obtaining platform API keys
-2. Implementing actual API calls in searcher classes
-3. Respecting rate limits and ToS
+Real eBay integration is available by:
+1. Obtaining an eBay Developer API key (free, 5,000 calls/day)
+2. Setting the `EBAY_API_KEY` environment variable
+3. The app automatically uses real API when key is detected
+
+For detailed eBay API setup, see [docs/EBAY_API_GUIDE.md](docs/EBAY_API_GUIDE.md).
 
 ## How to Use
 
@@ -152,25 +155,31 @@ Real integration can be added by:
 4. Iterate based on feedback
 
 ### Future Enhancements
-1. **Real API Integration**
-   - Implement actual eBay API calls
+1. **eBay API Enhancements**
+   - ✅ ~~Implement actual eBay API calls~~ (COMPLETED)
+   - Add more search filters (condition, shipping, etc.)
+   - Show item images and thumbnails
+   - Display seller ratings
+   - Support multiple eBay global sites
+
+2. **Kleinanzeigen Integration**
    - Implement Kleinanzeigen scraping/API
    - Add more platforms (Amazon, etc.)
 
-2. **Advanced Features**
+3. **Advanced Features**
    - Push notifications for new matches
    - Background search scheduling
    - Price history tracking
    - User authentication
    - Cloud sync
 
-3. **UI Improvements**
+4. **UI Improvements**
    - Settings screen for API keys
    - Dark mode support
    - Better match details view
    - Image previews
 
-4. **Performance**
+5. **Performance**
    - Search result caching
    - Rate limiting
    - Offline support
