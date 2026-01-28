@@ -34,6 +34,7 @@ node_modules/
 /ios/build/
 /web-build/
 dist/
+release/
 
 # Expo
 .expo/
