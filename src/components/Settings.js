@@ -9,9 +9,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const SETTINGS_KEY = 'app_settings';
+import { SettingsService } from '../services/SettingsService';
 
 export default function Settings({ onClose, onSettingsChange }) {
   const [apiKey, setApiKey] = useState('');
@@ -25,13 +23,10 @@ export default function Settings({ onClose, onSettingsChange }) {
 
   const loadSettings = async () => {
     try {
-      const savedSettings = await AsyncStorage.getItem(SETTINGS_KEY);
-      if (savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        setApiKey(settings.openrouterApiKey || '');
-        setEbayEnabled(settings.ebayEnabled !== undefined ? settings.ebayEnabled : true);
-        setKleinanzeigenEnabled(settings.kleinanzeigenEnabled !== undefined ? settings.kleinanzeigenEnabled : true);
-      }
+      const settings = await SettingsService.loadSettings();
+      setApiKey(settings.openrouterApiKey || '');
+      setEbayEnabled(settings.ebayEnabled !== undefined ? settings.ebayEnabled : true);
+      setKleinanzeigenEnabled(settings.kleinanzeigenEnabled !== undefined ? settings.kleinanzeigenEnabled : true);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -47,14 +42,17 @@ export default function Settings({ onClose, onSettingsChange }) {
         kleinanzeigenEnabled,
       };
       
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      const success = await SettingsService.saveSettings(settings);
       
-      // Notify parent component about settings change
-      if (onSettingsChange) {
-        onSettingsChange(settings);
+      if (success) {
+        // Notify parent component about settings change
+        if (onSettingsChange) {
+          onSettingsChange(settings);
+        }
+        Alert.alert('Success', 'Settings saved successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to save settings');
       }
-      
-      Alert.alert('Success', 'Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
       Alert.alert('Error', 'Failed to save settings');
@@ -77,7 +75,12 @@ export default function Settings({ onClose, onSettingsChange }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+        <TouchableOpacity 
+          onPress={onClose} 
+          style={styles.closeButton}
+          accessibilityLabel="Close settings"
+          accessibilityRole="button"
+        >
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
       </View>

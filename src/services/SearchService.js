@@ -77,7 +77,7 @@ class EbaySearcher {
     return mockItems
       .filter(item => !maxPrice || item.price <= maxPrice)
       .map((item, idx) => ({
-        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
         title: item.title,
         price: item.price,
         platform: platform,
@@ -112,7 +112,7 @@ class KleinanzeigenSearcher {
     return mockItems
       .filter(item => !maxPrice || item.price <= maxPrice)
       .map((item, idx) => ({
-        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
         title: item.title,
         price: item.price,
         platform: platform,

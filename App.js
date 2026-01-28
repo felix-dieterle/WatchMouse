@@ -107,7 +107,7 @@ export default function App() {
     }
 
     const newSearch = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       query: newSearchQuery,
       maxPrice: newSearchMaxPrice ? parseFloat(newSearchMaxPrice) : null,
       createdAt: new Date().toISOString(),
@@ -325,11 +325,13 @@ export default function App() {
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => setShowSettings(true)}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
           >
             <Text style={styles.settingsButtonText}>⚙️</Text>
           </TouchableOpacity>
         </View>
-        {!settings.openrouterApiKey && (
+        {(!settings.openrouterApiKey || !settings.openrouterApiKey.trim()) && (
           <View style={styles.warningBanner}>
             <Text style={styles.warningText}>⚠ No API key - Using basic keyword matching</Text>
           </View>

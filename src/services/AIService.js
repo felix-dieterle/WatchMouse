@@ -7,7 +7,10 @@ export class AIService {
   constructor(apiKey = null) {
     // OpenRouter API configuration
     // Accept API key from settings or environment
-    this.apiKey = apiKey || process.env.OPENROUTER_API_KEY || '';
+    // If apiKey is explicitly provided (even if empty), use it; otherwise fall back to env
+    this.apiKey = (apiKey !== null && apiKey !== undefined) 
+      ? apiKey 
+      : (process.env.OPENROUTER_API_KEY || '');
     this.baseUrl = 'https://openrouter.ai/api/v1';
     this.model = 'openai/gpt-3.5-turbo'; // Using a cheaper model
   }
