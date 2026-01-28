@@ -29,9 +29,8 @@ node_modules/
 .eslintcache
 
 # Build files
-/android/app/build/
-/android/.gradle/
-/ios/build/
+/android/
+/ios/
 /web-build/
 dist/
 release/
