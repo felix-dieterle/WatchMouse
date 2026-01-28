@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'react-native',
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|expo|@expo|react-navigation|@react-navigation|@react-native-async-storage)/)',
+    'node_modules/(?!(react-native|@react-native|expo|@expo|expo-secure-store|react-navigation|@react-navigation|@react-native-async-storage)/)',
   ],
   testMatch: [
     '**/__tests__/**/*.js',

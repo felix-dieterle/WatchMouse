@@ -1,6 +1,23 @@
 import axios from 'axios';
 
 /**
+ * Utility function to redact sensitive data from error messages
+ * Prevents API keys from appearing in logs or crash reports
+ */
+function redactSensitiveData(message) {
+  if (typeof message !== 'string') {
+    return message;
+  }
+  
+  // Redact anything that looks like an API key (long alphanumeric strings)
+  // This regex matches common API key patterns
+  return message.replace(/([A-Za-z0-9]{20,})/g, (match) => {
+    // Show first 4 characters and mask the rest
+    return match.substring(0, 4) + '****';
+  });
+}
+
+/**
  * Service for searching across multiple shopping platforms
  */
 export class SearchService {
@@ -30,7 +47,7 @@ export class SearchService {
         const ebayResults = await this.platforms.ebay.search(query, maxPrice);
         results.push(...ebayResults);
       } catch (error) {
-        console.error('eBay search error:', error);
+        console.error('eBay search error:', redactSensitiveData(error.message || String(error)));
       }
     }
 
@@ -40,7 +57,7 @@ export class SearchService {
         const kleinanzeigenResults = await this.platforms.kleinanzeigen.search(query, maxPrice);
         results.push(...kleinanzeigenResults);
       } catch (error) {
-        console.error('Kleinanzeigen search error:', error);
+        console.error('Kleinanzeigen search error:', redactSensitiveData(error.message || String(error)));
       }
     }
 
@@ -69,7 +86,7 @@ class EbaySearcher {
     try {
       return await this.searchWithAPI(query, maxPrice);
     } catch (error) {
-      console.error('eBay API error, falling back to mock data:', error.message);
+      console.error('eBay API error, falling back to mock data:', redactSensitiveData(error.message || ''));
       return this.getMockResults(query, maxPrice, 'eBay');
     }
   }
@@ -156,7 +173,7 @@ class EbaySearcher {
         };
       });
     } catch (error) {
-      console.error('Error parsing eBay API response:', error);
+      console.error('Error parsing eBay API response:', redactSensitiveData(error.message || String(error)));
       return [];
     }
   }

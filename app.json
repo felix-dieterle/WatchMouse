@@ -35,6 +35,9 @@
       "eas": {
         "projectId": "watchmouse-project"
       }
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
