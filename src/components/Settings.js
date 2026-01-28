@@ -63,6 +63,22 @@ export default function Settings({ onClose, onSettingsChange }) {
     saveSettings();
   };
 
+  const handleEbayToggle = (value) => {
+    if (!value && !kleinanzeigenEnabled) {
+      Alert.alert('Error', 'At least one platform must be enabled');
+      return;
+    }
+    setEbayEnabled(value);
+  };
+
+  const handleKleinanzeigenToggle = (value) => {
+    if (!value && !ebayEnabled) {
+      Alert.alert('Error', 'At least one platform must be enabled');
+      return;
+    }
+    setKleinanzeigenEnabled(value);
+  };
+
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -119,9 +135,10 @@ export default function Settings({ onClose, onSettingsChange }) {
             </View>
             <Switch
               value={ebayEnabled}
-              onValueChange={setEbayEnabled}
+              onValueChange={handleEbayToggle}
               trackColor={{ false: '#767577', true: '#81b0ff' }}
               thumbColor={ebayEnabled ? '#2196F3' : '#f4f3f4'}
+              accessibilityLabel="Toggle eBay"
             />
           </View>
 
@@ -132,9 +149,10 @@ export default function Settings({ onClose, onSettingsChange }) {
             </View>
             <Switch
               value={kleinanzeigenEnabled}
-              onValueChange={setKleinanzeigenEnabled}
+              onValueChange={handleKleinanzeigenToggle}
               trackColor={{ false: '#767577', true: '#81b0ff' }}
               thumbColor={kleinanzeigenEnabled ? '#2196F3' : '#f4f3f4'}
+              accessibilityLabel="Toggle Kleinanzeigen"
             />
           </View>
 

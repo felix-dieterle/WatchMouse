@@ -1,6 +1,33 @@
 import axios from 'axios';
 
 /**
+ * Utility function to redact sensitive data from error messages
+ * Prevents API keys from appearing in logs or crash reports
+ * Only redacts when specific sensitive patterns are detected
+ */
+function redactSensitiveData(message) {
+  if (typeof message !== 'string') {
+    return message;
+  }
+  
+  // Redact only when we detect common API key indicators in the message
+  // This reduces false positives while still protecting sensitive data
+  const hasApiKeyIndicator = /api[_-]?key|token|secret|auth|bearer/i.test(message);
+  
+  if (!hasApiKeyIndicator) {
+    return message;
+  }
+  
+  // Redact alphanumeric strings that appear after key indicators
+  return message.replace(
+    /(api[_-]?key|token|secret|auth|bearer)[:\s=]+([A-Za-z0-9_-]{10,})/gi,
+    (match, prefix, key) => {
+      return `${prefix}: ${key.substring(0, 4)}****`;
+    }
+  );
+}
+
+/**
  * Service for searching across multiple shopping platforms
  */
 export class SearchService {
@@ -30,7 +57,7 @@ export class SearchService {
         const ebayResults = await this.platforms.ebay.search(query, maxPrice);
         results.push(...ebayResults);
       } catch (error) {
-        console.error('eBay search error:', error);
+        console.error('eBay search error:', redactSensitiveData(error.message || String(error)));
       }
     }
 
@@ -40,7 +67,7 @@ export class SearchService {
         const kleinanzeigenResults = await this.platforms.kleinanzeigen.search(query, maxPrice);
         results.push(...kleinanzeigenResults);
       } catch (error) {
-        console.error('Kleinanzeigen search error:', error);
+        console.error('Kleinanzeigen search error:', redactSensitiveData(error.message || String(error)));
       }
     }
 
@@ -69,7 +96,7 @@ class EbaySearcher {
     try {
       return await this.searchWithAPI(query, maxPrice);
     } catch (error) {
-      console.error('eBay API error, falling back to mock data:', error.message);
+      console.error('eBay API error, falling back to mock data:', redactSensitiveData(error.message || ''));
       return this.getMockResults(query, maxPrice, 'eBay');
     }
   }
@@ -156,7 +183,7 @@ class EbaySearcher {
         };
       });
     } catch (error) {
-      console.error('Error parsing eBay API response:', error);
+      console.error('Error parsing eBay API response:', redactSensitiveData(error.message || String(error)));
       return [];
     }
   }

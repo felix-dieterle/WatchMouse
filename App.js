@@ -12,12 +12,37 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ErrorBoundary } from 'react-error-boundary';
 import { SearchService } from './src/services/SearchService';
 import { AIService } from './src/services/AIService';
 import { SettingsService } from './src/services/SettingsService';
 import Settings from './src/components/Settings';
 
-export default function App() {
+/**
+ * Error Fallback Component
+ * Displays when an unhandled error occurs in the app
+ */
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <View style={styles.errorContainer}>
+      <View style={styles.errorContent}>
+        <Text style={styles.errorEmoji}>⚠️</Text>
+        <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
+        <Text style={styles.errorMessage}>
+          {error.message || 'An unexpected error occurred'}
+        </Text>
+        <TouchableOpacity
+          style={styles.errorButton}
+          onPress={resetErrorBoundary}
+        >
+          <Text style={styles.errorButtonText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function AppContent() {
   const [searches, setSearches] = useState([]);
   const [matches, setMatches] = useState([]);
   const [showAddSearch, setShowAddSearch] = useState(false);
@@ -552,6 +577,28 @@ export default function App() {
   );
 }
 
+/**
+ * Main App component wrapped with ErrorBoundary
+ * Catches and handles unhandled errors to prevent full app crashes
+ */
+export default function App() {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => {
+        // Reset app state or reload - for now just remount
+        console.log('Error boundary reset');
+      }}
+      onError={(error, errorInfo) => {
+        // Log error to console or error tracking service
+        console.error('ErrorBoundary caught an error:', error, errorInfo);
+      }}
+    >
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -815,5 +862,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4CAF50',
     fontWeight: '500',
+  },
+  // Error Boundary styles
+  errorContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorContent: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    maxWidth: 400,
+  },
+  errorEmoji: {
+    fontSize: 60,
+    marginBottom: 20,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  errorButton: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 5,
+  },
+  errorButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
