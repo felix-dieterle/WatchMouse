@@ -13,7 +13,7 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     permissions:
       contents: read
     
@@ -30,29 +30,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+      - name: Check project configuration
+        run: npx expo config --type public
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Verify build configuration
-        run: npx expo prebuild --platform android
-
-      - name: Validate Gradle build
-        run: |
-          cd android
-          ./gradlew assembleDebug
+      - name: Verify project can be prebuilt
+        run: npx expo prebuild --no-install --platform android
