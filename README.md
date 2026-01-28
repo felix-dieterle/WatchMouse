@@ -102,16 +102,24 @@ npm test
 
 ## CI/CD
 
-The project includes automated CI/CD that:
-- Builds APK on every tag push
-- Creates GitHub releases with downloadable APKs
-- Uploads build artifacts
+The project includes automated CI/CD with the following workflows:
 
-To create a release:
+### Automated Builds
+- **On merge to main**: Automatically builds APK and uploads as workflow artifact
+  - Artifacts are available in the Actions tab for 30 days
+  - Build name includes timestamp and commit SHA
+- **On tag push**: Creates official GitHub release with downloadable APK
+  - Releases are permanent and publicly available
+
+### Creating a Release
+
+For an official release:
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+For development builds, simply merge to main - the APK will be built automatically and available as a workflow artifact.
 
 ## Contributing
 
