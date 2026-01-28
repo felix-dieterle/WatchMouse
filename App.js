@@ -50,7 +50,13 @@ export default function App() {
     try {
       const savedMatches = await AsyncStorage.getItem('matches');
       if (savedMatches) {
-        setMatches(JSON.parse(savedMatches));
+        const matches = JSON.parse(savedMatches);
+        // Migration: add isRead property to existing matches that don't have it
+        const migratedMatches = matches.map(m => ({
+          ...m,
+          isRead: m.isRead !== undefined ? m.isRead : false
+        }));
+        setMatches(migratedMatches);
       }
     } catch (error) {
       console.error('Error loading matches:', error);
@@ -278,6 +284,9 @@ export default function App() {
     </View>
   );
 
+  // Calculate counts for UI
+  const unreadCount = matches.filter(m => !m.isRead).length;
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
@@ -369,8 +378,7 @@ export default function App() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
               Recent Matches ({matches.length})
-              {matches.filter(m => !m.isRead).length > 0 && 
-                ` · ${matches.filter(m => !m.isRead).length} unread`}
+              {unreadCount > 0 && ` · ${unreadCount} unread`}
             </Text>
             {matches.length > 0 && (
               <View style={styles.headerButtons}>
@@ -699,13 +707,13 @@ const styles = StyleSheet.create({
   },
   headerButtons: {
     flexDirection: 'row',
-    gap: 8,
   },
   markAllReadButton: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 5,
+    marginRight: 8,
   },
   matchItemRead: {
     backgroundColor: '#f9f9f9',

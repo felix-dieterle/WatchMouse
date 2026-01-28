@@ -148,7 +148,6 @@ MIT License - see LICENSE file for details
 - [ ] Advanced filters (condition, location, etc.)
 - [ ] User authentication and cloud sync
 - [ ] Price history tracking
-- [ ] Price history tracking
 
 ## Support
 

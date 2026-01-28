@@ -105,7 +105,7 @@ cd android
 ### Build fails
 - Check the GitHub Actions logs
 - Ensure all dependencies are properly declared
-- Verify Java/Android SDK versions match workflow
+- Verify Java/Android SDK versions match workflow (see `.github/workflows/build-apk.yml` for required versions: Java 17, Node 20)
 
 ### Release not created
 - Ensure tag starts with `v` (e.g., `v1.0.0`, not `1.0.0`)
