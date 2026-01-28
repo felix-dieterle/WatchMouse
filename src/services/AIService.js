@@ -17,7 +17,7 @@ export class AIService {
    * @returns {boolean} True if API key is present
    */
   hasValidApiKey() {
-    return this.apiKey && this.apiKey.trim().length > 0;
+    return !!(this.apiKey && this.apiKey.trim().length > 0);
   }
 
   /**
