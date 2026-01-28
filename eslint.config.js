@@ -53,6 +53,15 @@ export default [
         URL: 'readonly',
         URLSearchParams: 'readonly',
         fetch: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        performance: 'readonly',
+        Date: 'readonly',
+        Map: 'readonly',
+        Set: 'readonly',
+        Promise: 'readonly',
       },
     },
     plugins: {
@@ -73,6 +82,7 @@ export default [
       }],
       'no-console': 'off', // We use console.log for debugging
       'no-undef': 'error',
+      'no-control-regex': 'off', // Allow control characters in regex for sanitization
       
       // Best practices
       'eqeqeq': ['error', 'always'],

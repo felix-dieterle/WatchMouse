@@ -1,8 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-
-const SETTINGS_KEY = 'app_settings';
-const SECURE_OPENROUTER_KEY = 'secure_openrouter_api_key';
+import { STORAGE_KEYS, DEFAULT_SETTINGS } from '../constants';
 
 export const SettingsService = {
   /**
@@ -13,11 +11,8 @@ export const SettingsService = {
   async loadSettings() {
     try {
       // Load non-sensitive settings from AsyncStorage
-      const savedSettings = await AsyncStorage.getItem(SETTINGS_KEY);
-      let settings = {
-        ebayEnabled: true,
-        kleinanzeigenEnabled: true,
-      };
+      const savedSettings = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
+      let settings = { ...DEFAULT_SETTINGS };
       
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
@@ -29,7 +24,7 @@ export const SettingsService = {
       
       // Load API key securely from SecureStore
       try {
-        const secureApiKey = await SecureStore.getItemAsync(SECURE_OPENROUTER_KEY);
+        const secureApiKey = await SecureStore.getItemAsync(STORAGE_KEYS.SECURE_OPENROUTER_KEY);
         settings.openrouterApiKey = secureApiKey || '';
       } catch (secureError) {
         console.error('Error loading API key from SecureStore:', secureError);
@@ -40,11 +35,7 @@ export const SettingsService = {
     } catch (error) {
       console.error('Error loading settings:', error);
       // Return default settings on error
-      return {
-        openrouterApiKey: '',
-        ebayEnabled: true,
-        kleinanzeigenEnabled: true,
-      };
+      return { ...DEFAULT_SETTINGS };
     }
   },
 
@@ -59,15 +50,15 @@ export const SettingsService = {
       const { openrouterApiKey, ...nonSensitiveSettings } = settings;
       
       // Save non-sensitive settings to AsyncStorage
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(nonSensitiveSettings));
+      await AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(nonSensitiveSettings));
       
       // Save API key securely to SecureStore
       if (openrouterApiKey) {
-        await SecureStore.setItemAsync(SECURE_OPENROUTER_KEY, openrouterApiKey);
+        await SecureStore.setItemAsync(STORAGE_KEYS.SECURE_OPENROUTER_KEY, openrouterApiKey);
       } else {
         // Delete the key if it's empty
         try {
-          await SecureStore.deleteItemAsync(SECURE_OPENROUTER_KEY);
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.SECURE_OPENROUTER_KEY);
         } catch (deleteError) {
           // Ignore errors when deleting non-existent keys
           console.log('No secure key to delete or deletion failed:', deleteError.message);

@@ -1,31 +1,10 @@
 import axios from 'axios';
+import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS, CACHE_CONFIG } from '../constants';
+import { redactSensitiveData } from '../utils/security';
+import { Cache } from '../utils/performance';
 
-/**
- * Utility function to redact sensitive data from error messages
- * Prevents API keys from appearing in logs or crash reports
- * Only redacts when specific sensitive patterns are detected
- */
-function redactSensitiveData(message) {
-  if (typeof message !== 'string') {
-    return message;
-  }
-  
-  // Redact only when we detect common API key indicators in the message
-  // This reduces false positives while still protecting sensitive data
-  const hasApiKeyIndicator = /api[_-]?key|token|secret|auth|bearer/i.test(message);
-  
-  if (!hasApiKeyIndicator) {
-    return message;
-  }
-  
-  // Redact alphanumeric strings that appear after key indicators
-  return message.replace(
-    /(api[_-]?key|token|secret|auth|bearer)[:\s=]+([A-Za-z0-9_-]{10,})/gi,
-    (match, prefix, key) => {
-      return `${prefix}: ${key.substring(0, 4)}****`;
-    }
-  );
-}
+// Initialize cache for search results
+const searchCache = new Cache(CACHE_CONFIG.MAX_CACHE_SIZE);
 
 /**
  * Service for searching across multiple shopping platforms
@@ -77,27 +56,41 @@ export class SearchService {
 
 /**
  * eBay platform searcher
+ * Searches eBay using the Finding API with caching support
  */
 class EbaySearcher {
   constructor() {
     // Using eBay Finding API (requires API key for production)
     this.apiKey = process.env.EBAY_API_KEY || '';
-    this.baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
-    this.globalId = 'EBAY-DE'; // Default to German eBay
+    this.baseUrl = API_CONFIG.EBAY.BASE_URL;
+    this.globalId = API_CONFIG.EBAY.GLOBAL_ID;
   }
 
   async search(query, maxPrice) {
+    // Generate cache key
+    const cacheKey = `ebay:${query}:${maxPrice || 'no-max'}`;
+    
+    // Check cache first
+    const cached = searchCache.get(cacheKey);
+    if (cached) {
+      console.log('eBay: Returning cached results');
+      return cached;
+    }
+    
     // If no API key is configured, fall back to mock data
     if (!this.apiKey) {
       console.log('eBay: No API key configured, using mock data');
-      return this.getMockResults(query, maxPrice, 'eBay');
+      return this.getMockResults(query, maxPrice, PLATFORMS.EBAY);
     }
 
     try {
-      return await this.searchWithAPI(query, maxPrice);
+      const results = await this.searchWithAPI(query, maxPrice);
+      // Cache the results
+      searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+      return results;
     } catch (error) {
       console.error('eBay API error, falling back to mock data:', redactSensitiveData(error.message || ''));
-      return this.getMockResults(query, maxPrice, 'eBay');
+      return this.getMockResults(query, maxPrice, PLATFORMS.EBAY);
     }
   }
 
@@ -110,12 +103,12 @@ class EbaySearcher {
 
     // Build eBay Finding API request
     const params = {
-      'OPERATION-NAME': 'findItemsByKeywords',
-      'SERVICE-VERSION': '1.0.0',
+      'OPERATION-NAME': API_CONFIG.EBAY.OPERATION,
+      'SERVICE-VERSION': API_CONFIG.EBAY.SERVICE_VERSION,
       'SECURITY-APPNAME': this.apiKey,
       'RESPONSE-DATA-FORMAT': 'JSON',
       'keywords': query,
-      'paginationInput.entriesPerPage': '20',
+      'paginationInput.entriesPerPage': API_CONFIG.EBAY.RESULTS_PER_PAGE.toString(),
       'sortOrder': 'StartTimeNewest',
       'GLOBAL-ID': this.globalId,
     };
@@ -134,7 +127,7 @@ class EbaySearcher {
 
     // Make API request with timeout
     const response = await axios.get(url, {
-      timeout: 10000, // 10 second timeout
+      timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
     });
     
     // Parse response
@@ -171,11 +164,11 @@ class EbaySearcher {
 
         return {
           // Use eBay item ID as base for uniqueness
-          id: `eBay-${itemId}-${Math.random().toString(36).slice(2, 11)}`,
+          id: `${PLATFORMS.EBAY}-${itemId}-${Math.random().toString(36).slice(2, 11)}`,
           title: title,
           price: price,
           currency: currency,
-          platform: 'eBay',
+          platform: PLATFORMS.EBAY,
           url: url,
           condition: condition,
           location: location,
@@ -212,16 +205,17 @@ class EbaySearcher {
 
 /**
  * Kleinanzeigen platform searcher
+ * Currently returns mock data - real implementation requires web scraping
  */
 class KleinanzeigenSearcher {
   constructor() {
-    this.baseUrl = 'https://www.kleinanzeigen.de/s-';
+    this.baseUrl = API_CONFIG.KLEINANZEIGEN.BASE_URL;
   }
 
   async search(query, maxPrice) {
     // Mock implementation - in production, scrape or use API if available
     // For now, return mock data for demonstration
-    return this.getMockResults(query, maxPrice, 'Kleinanzeigen');
+    return this.getMockResults(query, maxPrice, PLATFORMS.KLEINANZEIGEN);
   }
 
   getMockResults(query, maxPrice, platform) {

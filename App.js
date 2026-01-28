@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,6 +17,14 @@ import { SearchService } from './src/services/SearchService';
 import { AIService } from './src/services/AIService';
 import { SettingsService } from './src/services/SettingsService';
 import Settings from './src/components/Settings';
+import { 
+  STORAGE_KEYS, 
+  SORT_OPTIONS, 
+  FILTER_OPTIONS,
+  ERROR_MESSAGES,
+  SUCCESS_MESSAGES,
+  DEFAULT_SETTINGS,
+} from './src/constants';
 
 /**
  * Error Fallback Component
@@ -50,19 +58,15 @@ function AppContent() {
   const [newSearchQuery, setNewSearchQuery] = useState('');
   const [newSearchMaxPrice, setNewSearchMaxPrice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [settings, setSettings] = useState({
-    openrouterApiKey: '',
-    ebayEnabled: true,
-    kleinanzeigenEnabled: true,
-  });
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   
   // Search and filter states
   const [searchFilter, setSearchFilter] = useState('');
   const [matchFilter, setMatchFilter] = useState('');
-  const [searchSort, setSearchSort] = useState('date-desc'); // date-desc, date-asc, name-asc, name-desc
-  const [matchSort, setMatchSort] = useState('date-desc'); // date-desc, date-asc, price-asc, price-desc, title-asc
-  const [platformFilter, setPlatformFilter] = useState('all'); // all, eBay, Kleinanzeigen
-  const [readFilter, setReadFilter] = useState('all'); // all, unread, read
+  const [searchSort, setSearchSort] = useState(SORT_OPTIONS.SEARCHES.DATE_DESC);
+  const [matchSort, setMatchSort] = useState(SORT_OPTIONS.MATCHES.DATE_DESC);
+  const [platformFilter, setPlatformFilter] = useState(FILTER_OPTIONS.PLATFORM.ALL);
+  const [readFilter, setReadFilter] = useState(FILTER_OPTIONS.READ_STATUS.ALL);
 
   useEffect(() => {
     loadSettings();
@@ -70,29 +74,33 @@ function AppContent() {
     loadMatches();
   }, []);
 
-  const loadSettings = async () => {
+  // Load settings from storage
+  const loadSettings = useCallback(async () => {
     const loadedSettings = await SettingsService.loadSettings();
     setSettings(loadedSettings);
-  };
+  }, []);
 
-  const handleSettingsChange = (newSettings) => {
+  // Handle settings changes
+  const handleSettingsChange = useCallback((newSettings) => {
     setSettings(newSettings);
-  };
+  }, []);
 
-  const loadSearches = async () => {
+  // Load searches from AsyncStorage
+  const loadSearches = useCallback(async () => {
     try {
-      const savedSearches = await AsyncStorage.getItem('searches');
+      const savedSearches = await AsyncStorage.getItem(STORAGE_KEYS.SEARCHES);
       if (savedSearches) {
         setSearches(JSON.parse(savedSearches));
       }
     } catch (error) {
       console.error('Error loading searches:', error);
     }
-  };
+  }, []);
 
-  const loadMatches = async () => {
+  // Load matches from AsyncStorage with migration
+  const loadMatches = useCallback(async () => {
     try {
-      const savedMatches = await AsyncStorage.getItem('matches');
+      const savedMatches = await AsyncStorage.getItem(STORAGE_KEYS.MATCHES);
       if (savedMatches) {
         const matches = JSON.parse(savedMatches);
         // Migration: add isRead property to existing matches that don't have it
@@ -105,29 +113,32 @@ function AppContent() {
     } catch (error) {
       console.error('Error loading matches:', error);
     }
-  };
+  }, []);
 
-  const saveSearches = async (newSearches) => {
+  // Save searches to AsyncStorage
+  const saveSearches = useCallback(async (newSearches) => {
     try {
-      await AsyncStorage.setItem('searches', JSON.stringify(newSearches));
+      await AsyncStorage.setItem(STORAGE_KEYS.SEARCHES, JSON.stringify(newSearches));
       setSearches(newSearches);
     } catch (error) {
       console.error('Error saving searches:', error);
     }
-  };
+  }, []);
 
-  const saveMatches = async (newMatches) => {
+  // Save matches to AsyncStorage
+  const saveMatches = useCallback(async (newMatches) => {
     try {
-      await AsyncStorage.setItem('matches', JSON.stringify(newMatches));
+      await AsyncStorage.setItem(STORAGE_KEYS.MATCHES, JSON.stringify(newMatches));
       setMatches(newMatches);
     } catch (error) {
       console.error('Error saving matches:', error);
     }
-  };
+  }, []);
 
-  const addSearch = () => {
+  // Add new search
+  const addSearch = useCallback(() => {
     if (!newSearchQuery.trim()) {
-      Alert.alert('Error', 'Please enter a search query');
+      Alert.alert('Error', ERROR_MESSAGES.EMPTY_QUERY);
       return;
     }
 
@@ -143,14 +154,16 @@ function AppContent() {
     setNewSearchQuery('');
     setNewSearchMaxPrice('');
     setShowAddSearch(false);
-  };
+  }, [newSearchQuery, newSearchMaxPrice, searches, saveSearches]);
 
-  const deleteSearch = (searchId) => {
+  // Delete search
+  const deleteSearch = useCallback((searchId) => {
     const updatedSearches = searches.filter(s => s.id !== searchId);
     saveSearches(updatedSearches);
-  };
+  }, [searches, saveSearches]);
 
-  const clearAllMatches = () => {
+  // Clear all matches
+  const clearAllMatches = useCallback(() => {
     Alert.alert(
       'Clear All Matches',
       'Are you sure you want to clear all matches?',
@@ -159,22 +172,24 @@ function AppContent() {
         { text: 'Clear', onPress: () => saveMatches([]) },
       ]
     );
-  };
+  }, [saveMatches]);
 
-  const toggleMatchRead = (matchId) => {
+  // Toggle read status of a match
+  const toggleMatchRead = useCallback((matchId) => {
     const updatedMatches = matches.map(m => 
       m.id === matchId ? { ...m, isRead: !m.isRead } : m
     );
     saveMatches(updatedMatches);
-  };
+  }, [matches, saveMatches]);
 
-  const markAllAsRead = () => {
+  // Mark all matches as read
+  const markAllAsRead = useCallback(() => {
     const updatedMatches = matches.map(m => ({ ...m, isRead: true }));
     saveMatches(updatedMatches);
-  };
+  }, [matches, saveMatches]);
 
-  // Filter and sort searches
-  const getFilteredAndSortedSearches = () => {
+  // Filter and sort searches - memoized for performance
+  const getFilteredAndSortedSearches = useMemo(() => {
     let filtered = searches;
     
     // Apply search filter
@@ -188,13 +203,13 @@ function AppContent() {
     // Apply sorting
     const sorted = [...filtered].sort((a, b) => {
       switch (searchSort) {
-        case 'date-asc':
+        case SORT_OPTIONS.SEARCHES.DATE_ASC:
           return new Date(a.createdAt) - new Date(b.createdAt);
-        case 'date-desc':
+        case SORT_OPTIONS.SEARCHES.DATE_DESC:
           return new Date(b.createdAt) - new Date(a.createdAt);
-        case 'name-asc':
+        case SORT_OPTIONS.SEARCHES.NAME_ASC:
           return a.query.localeCompare(b.query);
-        case 'name-desc':
+        case SORT_OPTIONS.SEARCHES.NAME_DESC:
           return b.query.localeCompare(a.query);
         default:
           return 0;
@@ -202,21 +217,21 @@ function AppContent() {
     });
     
     return sorted;
-  };
+  }, [searches, searchFilter, searchSort]);
 
-  // Filter and sort matches
-  const getFilteredAndSortedMatches = () => {
+  // Filter and sort matches - memoized for performance
+  const getFilteredAndSortedMatches = useMemo(() => {
     let filtered = matches;
     
     // Apply platform filter
-    if (platformFilter !== 'all') {
+    if (platformFilter !== FILTER_OPTIONS.PLATFORM.ALL) {
       filtered = filtered.filter(m => m.platform === platformFilter);
     }
     
     // Apply read/unread filter
-    if (readFilter !== 'all') {
+    if (readFilter !== FILTER_OPTIONS.READ_STATUS.ALL) {
       filtered = filtered.filter(m => 
-        readFilter === 'unread' ? !m.isRead : m.isRead
+        readFilter === FILTER_OPTIONS.READ_STATUS.UNREAD ? !m.isRead : m.isRead
       );
     }
     
@@ -231,15 +246,15 @@ function AppContent() {
     // Apply sorting
     const sorted = [...filtered].sort((a, b) => {
       switch (matchSort) {
-        case 'date-asc':
+        case SORT_OPTIONS.MATCHES.DATE_ASC:
           return new Date(a.foundAt) - new Date(b.foundAt);
-        case 'date-desc':
+        case SORT_OPTIONS.MATCHES.DATE_DESC:
           return new Date(b.foundAt) - new Date(a.foundAt);
-        case 'price-asc':
+        case SORT_OPTIONS.MATCHES.PRICE_ASC:
           return a.price - b.price;
-        case 'price-desc':
+        case SORT_OPTIONS.MATCHES.PRICE_DESC:
           return b.price - a.price;
-        case 'title-asc':
+        case SORT_OPTIONS.MATCHES.TITLE_ASC:
           return a.title.localeCompare(b.title);
         default:
           return 0;
@@ -247,9 +262,10 @@ function AppContent() {
     });
     
     return sorted;
-  };
+  }, [matches, platformFilter, readFilter, matchFilter, matchSort]);
 
-  const runSearch = async (search) => {
+  // Run search for a specific query
+  const runSearch = useCallback(async (search) => {
     setIsLoading(true);
     try {
       // Create SearchService with platform settings
@@ -275,17 +291,17 @@ function AppContent() {
       saveMatches(updatedMatches);
       
       const aiEnabled = aiService.hasValidApiKey();
-      const aiStatus = aiEnabled ? '(AI-powered)' : '(keyword matching)';
-      Alert.alert('Success', `Found ${matchedResults.length} new matches! ${aiStatus}`);
+      Alert.alert('Success', SUCCESS_MESSAGES.SEARCH_COMPLETE(matchedResults.length, aiEnabled));
     } catch (error) {
       console.error('Error running search:', error);
-      Alert.alert('Error', 'Failed to run search. Please check your configuration.');
+      Alert.alert('Error', ERROR_MESSAGES.SEARCH_FAILED);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [settings, matches, saveMatches]);
 
-  const renderSearchItem = ({ item }) => (
+  // Render item for search list - memoized
+  const renderSearchItem = useCallback(({ item }) => (
     <View style={styles.searchItem}>
       <View style={styles.searchInfo}>
         <Text style={styles.searchQuery}>{item.query}</Text>
@@ -309,9 +325,10 @@ function AppContent() {
         </TouchableOpacity>
       </View>
     </View>
-  );
+  ), [runSearch, deleteSearch, isLoading]);
 
-  const renderMatchItem = ({ item }) => (
+  // Render item for match list - memoized
+  const renderMatchItem = useCallback(({ item }) => (
     <View style={[styles.matchItem, item.isRead && styles.matchItemRead]}>
       <View style={styles.matchContent}>
         <Text style={[styles.matchTitle, item.isRead && styles.matchTitleRead]}>
@@ -332,10 +349,12 @@ function AppContent() {
         </Text>
       </TouchableOpacity>
     </View>
-  );
+  ), [toggleMatchRead]);
 
-  // Calculate counts for UI
-  const unreadCount = matches.filter(m => !m.isRead).length;
+  // Calculate unread count - memoized
+  const unreadCount = useMemo(() => {
+    return matches.filter(m => !m.isRead).length;
+  }, [matches]);
 
   return (
     <View style={styles.container}>
@@ -419,28 +438,28 @@ function AppContent() {
             />
             <View style={styles.sortButtons}>
               <TouchableOpacity
-                style={[styles.sortButton, searchSort === 'date-desc' && styles.sortButtonActive]}
-                onPress={() => setSearchSort('date-desc')}
+                style={[styles.sortButton, searchSort === SORT_OPTIONS.SEARCHES.DATE_DESC && styles.sortButtonActive]}
+                onPress={() => setSearchSort(SORT_OPTIONS.SEARCHES.DATE_DESC)}
               >
-                <Text style={[styles.sortButtonText, searchSort === 'date-desc' && styles.sortButtonTextActive]}>Newest</Text>
+                <Text style={[styles.sortButtonText, searchSort === SORT_OPTIONS.SEARCHES.DATE_DESC && styles.sortButtonTextActive]}>Newest</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.sortButton, searchSort === 'date-asc' && styles.sortButtonActive]}
-                onPress={() => setSearchSort('date-asc')}
+                style={[styles.sortButton, searchSort === SORT_OPTIONS.SEARCHES.DATE_ASC && styles.sortButtonActive]}
+                onPress={() => setSearchSort(SORT_OPTIONS.SEARCHES.DATE_ASC)}
               >
-                <Text style={[styles.sortButtonText, searchSort === 'date-asc' && styles.sortButtonTextActive]}>Oldest</Text>
+                <Text style={[styles.sortButtonText, searchSort === SORT_OPTIONS.SEARCHES.DATE_ASC && styles.sortButtonTextActive]}>Oldest</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.sortButton, searchSort === 'name-asc' && styles.sortButtonActive]}
-                onPress={() => setSearchSort('name-asc')}
+                style={[styles.sortButton, searchSort === SORT_OPTIONS.SEARCHES.NAME_ASC && styles.sortButtonActive]}
+                onPress={() => setSearchSort(SORT_OPTIONS.SEARCHES.NAME_ASC)}
               >
-                <Text style={[styles.sortButtonText, searchSort === 'name-asc' && styles.sortButtonTextActive]}>A-Z</Text>
+                <Text style={[styles.sortButtonText, searchSort === SORT_OPTIONS.SEARCHES.NAME_ASC && styles.sortButtonTextActive]}>A-Z</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <FlatList
-            data={getFilteredAndSortedSearches()}
+            data={getFilteredAndSortedSearches}
             renderItem={renderSearchItem}
             keyExtractor={item => item.id}
             scrollEnabled={false}
@@ -486,80 +505,80 @@ function AppContent() {
             />
             <View style={styles.sortButtons}>
               <TouchableOpacity
-                style={[styles.sortButton, platformFilter === 'all' && styles.sortButtonActive]}
-                onPress={() => setPlatformFilter('all')}
+                style={[styles.sortButton, platformFilter === FILTER_OPTIONS.PLATFORM.ALL && styles.sortButtonActive]}
+                onPress={() => setPlatformFilter(FILTER_OPTIONS.PLATFORM.ALL)}
               >
-                <Text style={[styles.sortButtonText, platformFilter === 'all' && styles.sortButtonTextActive]}>All</Text>
+                <Text style={[styles.sortButtonText, platformFilter === FILTER_OPTIONS.PLATFORM.ALL && styles.sortButtonTextActive]}>All</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.sortButton, platformFilter === 'eBay' && styles.sortButtonActive]}
-                onPress={() => setPlatformFilter('eBay')}
+                style={[styles.sortButton, platformFilter === FILTER_OPTIONS.PLATFORM.EBAY && styles.sortButtonActive]}
+                onPress={() => setPlatformFilter(FILTER_OPTIONS.PLATFORM.EBAY)}
               >
-                <Text style={[styles.sortButtonText, platformFilter === 'eBay' && styles.sortButtonTextActive]}>eBay</Text>
+                <Text style={[styles.sortButtonText, platformFilter === FILTER_OPTIONS.PLATFORM.EBAY && styles.sortButtonTextActive]}>eBay</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.sortButton, platformFilter === 'Kleinanzeigen' && styles.sortButtonActive]}
-                onPress={() => setPlatformFilter('Kleinanzeigen')}
+                style={[styles.sortButton, platformFilter === FILTER_OPTIONS.PLATFORM.KLEINANZEIGEN && styles.sortButtonActive]}
+                onPress={() => setPlatformFilter(FILTER_OPTIONS.PLATFORM.KLEINANZEIGEN)}
               >
-                <Text style={[styles.sortButtonText, platformFilter === 'Kleinanzeigen' && styles.sortButtonTextActive]}>Klein.</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.sortButtons}>
-              <TouchableOpacity
-                style={[styles.sortButton, readFilter === 'all' && styles.sortButtonActive]}
-                onPress={() => setReadFilter('all')}
-              >
-                <Text style={[styles.sortButtonText, readFilter === 'all' && styles.sortButtonTextActive]}>All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sortButton, readFilter === 'unread' && styles.sortButtonActive]}
-                onPress={() => setReadFilter('unread')}
-              >
-                <Text style={[styles.sortButtonText, readFilter === 'unread' && styles.sortButtonTextActive]}>Unread</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sortButton, readFilter === 'read' && styles.sortButtonActive]}
-                onPress={() => setReadFilter('read')}
-              >
-                <Text style={[styles.sortButtonText, readFilter === 'read' && styles.sortButtonTextActive]}>Read</Text>
+                <Text style={[styles.sortButtonText, platformFilter === FILTER_OPTIONS.PLATFORM.KLEINANZEIGEN && styles.sortButtonTextActive]}>Klein.</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.sortButtons}>
               <TouchableOpacity
-                style={[styles.sortButton, matchSort === 'date-desc' && styles.sortButtonActive]}
-                onPress={() => setMatchSort('date-desc')}
+                style={[styles.sortButton, readFilter === FILTER_OPTIONS.READ_STATUS.ALL && styles.sortButtonActive]}
+                onPress={() => setReadFilter(FILTER_OPTIONS.READ_STATUS.ALL)}
               >
-                <Text style={[styles.sortButtonText, matchSort === 'date-desc' && styles.sortButtonTextActive]}>Newest</Text>
+                <Text style={[styles.sortButtonText, readFilter === FILTER_OPTIONS.READ_STATUS.ALL && styles.sortButtonTextActive]}>All</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.sortButton, matchSort === 'price-asc' && styles.sortButtonActive]}
-                onPress={() => setMatchSort('price-asc')}
+                style={[styles.sortButton, readFilter === FILTER_OPTIONS.READ_STATUS.UNREAD && styles.sortButtonActive]}
+                onPress={() => setReadFilter(FILTER_OPTIONS.READ_STATUS.UNREAD)}
               >
-                <Text style={[styles.sortButtonText, matchSort === 'price-asc' && styles.sortButtonTextActive]}>Price ↑</Text>
+                <Text style={[styles.sortButtonText, readFilter === FILTER_OPTIONS.READ_STATUS.UNREAD && styles.sortButtonTextActive]}>Unread</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.sortButton, matchSort === 'price-desc' && styles.sortButtonActive]}
-                onPress={() => setMatchSort('price-desc')}
+                style={[styles.sortButton, readFilter === FILTER_OPTIONS.READ_STATUS.READ && styles.sortButtonActive]}
+                onPress={() => setReadFilter(FILTER_OPTIONS.READ_STATUS.READ)}
               >
-                <Text style={[styles.sortButtonText, matchSort === 'price-desc' && styles.sortButtonTextActive]}>Price ↓</Text>
+                <Text style={[styles.sortButtonText, readFilter === FILTER_OPTIONS.READ_STATUS.READ && styles.sortButtonTextActive]}>Read</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.sortButtons}>
+              <TouchableOpacity
+                style={[styles.sortButton, matchSort === SORT_OPTIONS.MATCHES.DATE_DESC && styles.sortButtonActive]}
+                onPress={() => setMatchSort(SORT_OPTIONS.MATCHES.DATE_DESC)}
+              >
+                <Text style={[styles.sortButtonText, matchSort === SORT_OPTIONS.MATCHES.DATE_DESC && styles.sortButtonTextActive]}>Newest</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.sortButton, matchSort === 'title-asc' && styles.sortButtonActive]}
-                onPress={() => setMatchSort('title-asc')}
+                style={[styles.sortButton, matchSort === SORT_OPTIONS.MATCHES.PRICE_ASC && styles.sortButtonActive]}
+                onPress={() => setMatchSort(SORT_OPTIONS.MATCHES.PRICE_ASC)}
               >
-                <Text style={[styles.sortButtonText, matchSort === 'title-asc' && styles.sortButtonTextActive]}>A-Z</Text>
+                <Text style={[styles.sortButtonText, matchSort === SORT_OPTIONS.MATCHES.PRICE_ASC && styles.sortButtonTextActive]}>Price ↑</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, matchSort === SORT_OPTIONS.MATCHES.PRICE_DESC && styles.sortButtonActive]}
+                onPress={() => setMatchSort(SORT_OPTIONS.MATCHES.PRICE_DESC)}
+              >
+                <Text style={[styles.sortButtonText, matchSort === SORT_OPTIONS.MATCHES.PRICE_DESC && styles.sortButtonTextActive]}>Price ↓</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, matchSort === SORT_OPTIONS.MATCHES.TITLE_ASC && styles.sortButtonActive]}
+                onPress={() => setMatchSort(SORT_OPTIONS.MATCHES.TITLE_ASC)}
+              >
+                <Text style={[styles.sortButtonText, matchSort === SORT_OPTIONS.MATCHES.TITLE_ASC && styles.sortButtonTextActive]}>A-Z</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <FlatList
-            data={getFilteredAndSortedMatches()}
+            data={getFilteredAndSortedMatches}
             renderItem={renderMatchItem}
             keyExtractor={(item, index) => `${item.id}-${index}`}
             scrollEnabled={false}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
-                {matchFilter || platformFilter !== 'all' || readFilter !== 'all' 
+                {matchFilter || platformFilter !== FILTER_OPTIONS.PLATFORM.ALL || readFilter !== FILTER_OPTIONS.READ_STATUS.ALL
                   ? 'No matches match your filter' 
                   : 'No matches found yet'}
               </Text>
