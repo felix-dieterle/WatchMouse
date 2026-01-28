@@ -13,7 +13,7 @@ WatchMouse uses GitHub Actions to automatically build and distribute Android APK
 
 ### When They're Created
 - Automatically triggered when code is merged to the `main` branch
-- Also can be triggered manually via workflow dispatch
+- Can be triggered manually via workflow dispatch (always creates development builds)
 
 ### Characteristics
 - Named with timestamp: `watchmouse-dev-YYYYMMDD-HHMMSS.apk`
@@ -99,6 +99,10 @@ Both types of builds follow the same process:
    - Uploaded to GitHub (as artifact and/or release)
 
 ## Troubleshooting
+
+### Manual Workflow Trigger
+- **workflow_dispatch** always creates development builds, even if triggered from a tag
+- For release builds, always push a tag instead of using manual trigger
 
 ### Build Failed
 1. Check the [Actions tab](https://github.com/felix-dieterle/WatchMouse/actions) for error details

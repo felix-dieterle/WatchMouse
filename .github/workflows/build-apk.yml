@@ -56,7 +56,7 @@ jobs:
             echo "IS_RELEASE=true" >> $GITHUB_OUTPUT
             echo "BUILD_NAME=Release $VERSION" >> $GITHUB_OUTPUT
           else
-            # Main branch merge
+            # Development build (main branch or manual trigger)
             VERSION="dev-$(date +'%Y%m%d-%H%M%S')"
             COMMIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
@@ -101,7 +101,7 @@ jobs:
           retention-days: 30
 
       - name: Log build information
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: steps.version_info.outputs.IS_RELEASE == 'false'
         run: |
           echo "Build completed: ${{ steps.version_info.outputs.BUILD_NAME }}"
           echo "APK artifact available in workflow run artifacts"
