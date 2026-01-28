@@ -183,6 +183,16 @@ MIT License - see LICENSE file for details
 - [ ] User authentication and cloud sync
 - [ ] Price history tracking
 
+## Project Status
+
+For a comprehensive analysis of current state, known gaps, and critical next steps, see [GAPS_AND_STATUS.md](GAPS_AND_STATUS.md).
+
+**Quick Status** (v1.0.0):
+- ✅ MVP functional - Core features working
+- ⚠️ Security gaps - API key handling needs improvement (see GAPS_AND_STATUS.md)
+- ⚠️ Kleinanzeigen uses mock data only
+- ⚠️ No background monitoring yet (manual searches only)
+
 ## Support
 
 For issues and feature requests, please use the [GitHub Issues](https://github.com/felix-dieterle/WatchMouse/issues) page.
