@@ -1,7 +1,9 @@
 import axios from 'axios';
+import { API_CONFIG, PERFORMANCE_CONFIG } from '../constants';
 
 /**
  * AI Service for filtering and matching search results using OpenRouter API
+ * Provides AI-powered matching with fallback to keyword matching
  */
 export class AIService {
   constructor(apiKey = null) {
@@ -11,8 +13,8 @@ export class AIService {
     this.apiKey = (apiKey !== null && apiKey !== undefined) 
       ? apiKey 
       : (process.env.OPENROUTER_API_KEY || '');
-    this.baseUrl = 'https://openrouter.ai/api/v1';
-    this.model = 'openai/gpt-3.5-turbo'; // Using a cheaper model
+    this.baseUrl = API_CONFIG.OPENROUTER.BASE_URL;
+    this.model = API_CONFIG.OPENROUTER.MODEL;
   }
 
   /**
@@ -73,7 +75,10 @@ Indices of matching results:`;
   }
 
   /**
-   * Call OpenRouter API
+   * Call OpenRouter API with configured settings
+   * @param {string} prompt - The prompt to send to the AI
+   * @returns {Promise<string>} AI response text
+   * @throws {Error} When API call fails
    */
   async callAI(prompt) {
     const response = await axios.post(
@@ -86,8 +91,8 @@ Indices of matching results:`;
             content: prompt
           }
         ],
-        max_tokens: 100,
-        temperature: 0.3,
+        max_tokens: API_CONFIG.OPENROUTER.MAX_TOKENS,
+        temperature: API_CONFIG.OPENROUTER.TEMPERATURE,
       },
       {
         headers: {
@@ -95,7 +100,8 @@ Indices of matching results:`;
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://github.com/felix-dieterle/WatchMouse',
           'X-Title': 'WatchMouse',
-        }
+        },
+        timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
       }
     );
 
