@@ -50,7 +50,7 @@ describe('App Component', () => {
     const { getByText } = render(<App />);
     
     await waitFor(() => {
-      expect(getByText('WatchMouse')).toBeTruthy();
+      expect(getByText('4You WatchMouse')).toBeTruthy();
       expect(getByText('Shopping Deal Monitor')).toBeTruthy();
     });
   });
@@ -143,7 +143,7 @@ describe('App Component', () => {
     const { getByText } = render(<App />);
     
     await waitFor(() => {
-      expect(getByText('WatchMouse')).toBeTruthy();
+      expect(getByText('4You WatchMouse')).toBeTruthy();
     });
     
     // App should still render even with storage errors
@@ -156,7 +156,7 @@ describe('App Component', () => {
     const { getByText } = render(<App />);
     
     await waitFor(() => {
-      expect(getByText('WatchMouse')).toBeTruthy();
+      expect(getByText('4You WatchMouse')).toBeTruthy();
     });
     
     // App should render even with no saved searches
