@@ -363,7 +363,7 @@ function AppContent() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.title}>WatchMouse</Text>
+            <Text style={styles.title}>4You WatchMouse</Text>
             <Text style={styles.subtitle}>Shopping Deal Monitor</Text>
           </View>
           <TouchableOpacity
