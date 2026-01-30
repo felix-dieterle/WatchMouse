@@ -162,4 +162,39 @@ describe('App Component', () => {
     // App should render even with no saved searches
     expect(AsyncStorage.getItem).toHaveBeenCalled();
   });
+
+  test('should open link when "Open Link" button is pressed', async () => {
+    const { Linking } = require('react-native');
+    
+    AsyncStorage.getItem.mockImplementation((key) => {
+      if (key === 'matches') {
+        return Promise.resolve(JSON.stringify([
+          { 
+            id: 'match-1', 
+            title: 'iPhone 12', 
+            price: 450, 
+            platform: 'eBay',
+            url: 'https://www.ebay.de/itm/12345',
+            isRead: false,
+            foundAt: new Date().toISOString()
+          }
+        ]));
+      }
+      return Promise.resolve(null);
+    });
+
+    const { getByText } = render(<App />);
+    
+    await waitFor(() => {
+      expect(getByText('iPhone 12')).toBeTruthy();
+    });
+
+    const openLinkButton = getByText('🔗 Open Link');
+    fireEvent.press(openLinkButton);
+
+    await waitFor(() => {
+      expect(Linking.canOpenURL).toHaveBeenCalledWith('https://www.ebay.de/itm/12345');
+      expect(Linking.openURL).toHaveBeenCalledWith('https://www.ebay.de/itm/12345');
+    });
+  });
 });
