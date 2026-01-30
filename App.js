@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -188,6 +189,21 @@ function AppContent() {
     saveMatches(updatedMatches);
   }, [matches, saveMatches]);
 
+  // Open URL in browser
+  const openUrl = useCallback(async (url) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Cannot open this URL');
+      }
+    } catch (error) {
+      console.error('Error opening URL:', error);
+      Alert.alert('Error', 'Failed to open link');
+    }
+  }, []);
+
   // Filter and sort searches - memoized for performance
   const getFilteredAndSortedSearches = useMemo(() => {
     let filtered = searches;
@@ -340,16 +356,24 @@ function AppContent() {
           Found: {new Date(item.foundAt).toLocaleDateString()}
         </Text>
       </View>
-      <TouchableOpacity
-        style={styles.readToggleButton}
-        onPress={() => toggleMatchRead(item.id)}
-      >
-        <Text style={styles.readToggleText}>
-          {item.isRead ? '✓ Read' : '○ Mark Read'}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.matchActions}>
+        <TouchableOpacity
+          style={styles.openLinkButton}
+          onPress={() => openUrl(item.url)}
+        >
+          <Text style={styles.openLinkButtonText}>🔗 Open Link</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.readToggleButton}
+          onPress={() => toggleMatchRead(item.id)}
+        >
+          <Text style={styles.readToggleText}>
+            {item.isRead ? '✓ Read' : '○ Mark Read'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  ), [toggleMatchRead]);
+  ), [toggleMatchRead, openUrl]);
 
   // Calculate unread count - memoized
   const unreadCount = useMemo(() => {
@@ -868,14 +892,32 @@ const styles = StyleSheet.create({
   matchContent: {
     flex: 1,
   },
-  readToggleButton: {
+  matchActions: {
+    flexDirection: 'row',
     marginTop: 8,
+    gap: 8,
+  },
+  openLinkButton: {
+    backgroundColor: '#2196F3',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    borderRadius: 5,
+    flex: 1,
+    alignItems: 'center',
+  },
+  openLinkButtonText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  readToggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 5,
     borderWidth: 1,
     borderColor: '#4CAF50',
-    alignSelf: 'flex-start',
+    flex: 1,
+    alignItems: 'center',
   },
   readToggleText: {
     fontSize: 12,
