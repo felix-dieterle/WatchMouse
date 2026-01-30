@@ -13,6 +13,12 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(),
 }));
 
+// Mock Linking
+jest.mock('react-native/Libraries/Linking/Linking', () => ({
+  openURL: jest.fn(),
+  canOpenURL: jest.fn(() => Promise.resolve(true)),
+}));
+
 // Suppress console warnings and errors in tests
 jest.spyOn(console, 'warn').mockImplementation(() => {});
 jest.spyOn(console, 'error').mockImplementation(() => {});

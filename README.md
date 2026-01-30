@@ -11,6 +11,7 @@ A smart Android app that monitors shopping platforms (eBay, Kleinanzeigen) and f
 - 🔧 **Module System**: Enable/disable individual platforms (eBay, Kleinanzeigen) as needed
 - 💰 **Price Filtering**: Set maximum price limits for your searches
 - 📱 **Android App**: Native mobile experience built with React Native/Expo
+- 🔗 **Easy Navigation**: One-tap access to open offer pages directly in your browser
 - 🔔 **Deal Notifications**: Get notified when new matching items are found
 - 🏷️ **Multi-Platform Support**: Currently supports eBay and Kleinanzeigen
 - 🔎 **Advanced Search & Filter**: Filter and sort your saved searches and matches
@@ -93,9 +94,10 @@ For eBay integration:
 2. **Add a Search**: Tap "Add Search" and enter your search query and optional max price
 3. **Run Search**: Tap "Run" on any saved search to check for new matches
 4. **View Matches**: See recent matches in the "Recent Matches" section
-5. **Track What You've Seen**: Tap "Mark Read" on individual matches or "Mark All Read" to track reviewed items
-6. **Manage Searches**: Delete searches you no longer need
-7. **Filter & Sort**: 
+5. **Open Offer Pages**: Tap "🔗 Open Link" on any match to view the item on eBay or Kleinanzeigen
+6. **Track What You've Seen**: Tap "Mark Read" on individual matches or "Mark All Read" to track reviewed items
+7. **Manage Searches**: Delete searches you no longer need
+8. **Filter & Sort**: 
    - Use the filter box to search within saved searches or matches
    - Tap sort buttons to organize by date, name, or price
    - Filter matches by platform (eBay or Kleinanzeigen)
