@@ -151,6 +151,23 @@ describe('EbayRateLimiter', () => {
       expect(result.canProceed).toBe(false);
       expect(result.level).toBe('error');
     });
+
+    it('should handle invalid limit configuration (dailyLimit = 0)', async () => {
+      AsyncStorage.getItem.mockResolvedValue(JSON.stringify({
+        date: new Date().toDateString(),
+        count: 0,
+        lastReset: new Date().toISOString(),
+      }));
+
+      // Override dailyLimit to 0
+      rateLimiter.dailyLimit = 0;
+
+      const result = await rateLimiter.checkLimit();
+
+      expect(result.canProceed).toBe(false);
+      expect(result.warning).toContain('Invalid rate limit configuration');
+      expect(result.level).toBe('error');
+    });
   });
 
   describe('incrementCount', () => {
@@ -195,6 +212,22 @@ describe('EbayRateLimiter', () => {
       expect(stats.remaining).toBe(2500);
       expect(stats.usagePercent).toBe(0.5);
       expect(stats.date).toBeDefined();
+    });
+
+    it('should handle division by zero in getStats', async () => {
+      AsyncStorage.getItem.mockResolvedValue(JSON.stringify({
+        date: new Date().toDateString(),
+        count: 100,
+        lastReset: new Date().toISOString(),
+      }));
+
+      // Override dailyLimit to 0
+      rateLimiter.dailyLimit = 0;
+
+      const stats = await rateLimiter.getStats();
+
+      expect(stats.usagePercent).toBe(0);
+      expect(stats.limit).toBe(0);
     });
   });
 

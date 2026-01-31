@@ -117,20 +117,12 @@ class EbaySearcher {
     try {
       const results = await this.searchWithAPI(query, maxPrice);
       
-      // Increment rate limit counter after successful API call
-      await ebayRateLimiter.incrementCount();
-      
       // Cache the results
       searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
       return results;
     } catch (error) {
       console.error('eBay API error:', redactSensitiveData(error.message || ''));
       console.error('eBay: Failed to fetch results. Please check your API key and network connection.');
-      
-      // Still increment counter if we made an API call (even if it failed)
-      // This prevents retry loops from consuming the daily limit
-      await ebayRateLimiter.incrementCount();
-      
       return [];
     }
   }
@@ -170,6 +162,9 @@ class EbaySearcher {
     const response = await axios.get(url, {
       timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
     });
+    
+    // Increment rate limit counter after successful HTTP request to eBay
+    await ebayRateLimiter.incrementCount();
     
     // Parse response
     return this.parseAPIResponse(response.data, query);

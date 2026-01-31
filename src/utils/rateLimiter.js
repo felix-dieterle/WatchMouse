@@ -83,6 +83,17 @@ export class EbayRateLimiter {
       await this.load();
     }
 
+    // Guard against division by zero
+    if (this.dailyLimit <= 0) {
+      return {
+        canProceed: false,
+        warning: 'Invalid rate limit configuration (limit must be > 0)',
+        level: 'error',
+        remaining: 0,
+        usagePercent: 1.0,
+      };
+    }
+
     const remaining = this.dailyLimit - this.data.count;
     const usagePercent = this.data.count / this.dailyLimit;
 
@@ -152,7 +163,8 @@ export class EbayRateLimiter {
     }
 
     const remaining = this.dailyLimit - this.data.count;
-    const usagePercent = this.data.count / this.dailyLimit;
+    // Guard against division by zero
+    const usagePercent = this.dailyLimit > 0 ? this.data.count / this.dailyLimit : 0;
 
     return {
       count: this.data.count,
