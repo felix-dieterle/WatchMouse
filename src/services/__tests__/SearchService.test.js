@@ -43,6 +43,31 @@ describe('SearchService', () => {
     });
 
     it('should only search eBay when Kleinanzeigen is disabled', async () => {
+      // Mock successful API response for eBay
+      const mockResponse = {
+        data: {
+          findItemsByKeywordsResponse: [{
+            searchResult: [{
+              '@count': '1',
+              item: [{
+                itemId: ['123456789'],
+                title: ['Test Item'],
+                sellingStatus: [{
+                  currentPrice: [{
+                    __value__: '99.99',
+                    '@currencyId': 'EUR'
+                  }]
+                }],
+                viewItemURL: ['https://www.ebay.de/itm/123456789']
+              }]
+            }]
+          }]
+        }
+      };
+      
+      axios.get.mockResolvedValue(mockResponse);
+      process.env.EBAY_API_KEY = 'test-api-key';
+      
       const ebayOnlyService = new SearchService({
         ebayEnabled: true,
         kleinanzeigenEnabled: false,
@@ -52,6 +77,9 @@ describe('SearchService', () => {
       const platforms = [...new Set(results.map(r => r.platform))];
       expect(platforms).toContain('eBay');
       expect(platforms).not.toContain('Kleinanzeigen');
+      
+      // Clean up
+      delete process.env.EBAY_API_KEY;
     });
 
     it('should only search Kleinanzeigen when eBay is disabled', async () => {
@@ -106,13 +134,53 @@ describe('SearchService', () => {
       expect(Array.isArray(results)).toBe(true);
     });
 
-    it('should return results from both platforms', async () => {
-      const results = await searchService.searchAllPlatforms('test');
+    it('should return results from both platforms when eBay API key is configured', async () => {
+      // Mock successful API response for eBay
+      const mockResponse = {
+        data: {
+          findItemsByKeywordsResponse: [{
+            searchResult: [{
+              '@count': '1',
+              item: [{
+                itemId: ['123456789'],
+                title: ['Test Item'],
+                sellingStatus: [{
+                  currentPrice: [{
+                    __value__: '99.99',
+                    '@currencyId': 'EUR'
+                  }]
+                }],
+                viewItemURL: ['https://www.ebay.de/itm/123456789']
+              }]
+            }]
+          }]
+        }
+      };
+      
+      axios.get.mockResolvedValue(mockResponse);
+      process.env.EBAY_API_KEY = 'test-api-key';
+      
+      const testService = new SearchService();
+      const results = await testService.searchAllPlatforms('test');
       
       const platforms = [...new Set(results.map(r => r.platform))];
       expect(platforms.length).toBe(2);
       expect(platforms).toContain('eBay');
       expect(platforms).toContain('Kleinanzeigen');
+      
+      // Clean up
+      delete process.env.EBAY_API_KEY;
+    });
+
+    it('should only return Kleinanzeigen results when eBay API key is not configured', async () => {
+      // Use a different query to avoid cache collision
+      const results = await searchService.searchAllPlatforms('laptop');
+      
+      const platforms = [...new Set(results.map(r => r.platform))];
+      // Without API key, only Kleinanzeigen returns results
+      expect(platforms.length).toBe(1);
+      expect(platforms).toContain('Kleinanzeigen');
+      expect(platforms).not.toContain('eBay');
     });
   });
 
@@ -129,23 +197,12 @@ describe('SearchService', () => {
       delete process.env.EBAY_API_KEY;
     });
 
-    it('should use mock data when no API key is configured', async () => {
+    it('should return empty array when no API key is configured', async () => {
       const results = await searchService.platforms.ebay.search('iPhone', 200);
       
       expect(results).toBeDefined();
       expect(Array.isArray(results)).toBe(true);
-      expect(results.length).toBeGreaterThan(0);
-      expect(results[0]).toHaveProperty('platform', 'eBay');
-    });
-
-    it('should generate valid eBay URLs in mock data', async () => {
-      const results = await searchService.platforms.ebay.search('iPhone', 200);
-      
-      expect(results).toBeDefined();
-      expect(results.length).toBeGreaterThan(0);
-      results.forEach(result => {
-        expect(result.url).toMatch(/^https:\/\/www\.ebay\.de\/itm\/mock\d+$/);
-      });
+      expect(results.length).toBe(0);
     });
 
     it('should call eBay API when API key is configured', async () => {
@@ -213,7 +270,7 @@ describe('SearchService', () => {
       });
     });
 
-    it('should fall back to mock data when API call fails', async () => {
+    it('should return empty array when API call fails', async () => {
       // Mock API error
       axios.get.mockRejectedValue(new Error('Network error'));
       
@@ -224,8 +281,7 @@ describe('SearchService', () => {
       
       expect(results).toBeDefined();
       expect(Array.isArray(results)).toBe(true);
-      expect(results.length).toBeGreaterThan(0);
-      expect(results[0]).toHaveProperty('platform', 'eBay');
+      expect(results.length).toBe(0);
     });
 
     it('should handle empty API response gracefully', async () => {
