@@ -30,7 +30,8 @@ Die offenen Punkte für das eBay-Modul wurden erfolgreich implementiert. Die Fra
 ### 1. eBay Finding API Integration
 - ✅ Vollständige Integration mit `findItemsByKeywords` Operation
 - ✅ Echtzeit-Suchergebnisse von eBay
-- ✅ Automatischer Fallback zu Mock-Daten wenn kein API-Key konfiguriert ist
+- ✅ **Echte API-Integration ohne Mock-Daten-Fallback** (Update: Januar 2026)
+- ✅ API-Key ist erforderlich für eBay-Suchen
 - ✅ Preisfilterung über API-Parameter
 - ✅ Timeout-Handling (10 Sekunden)
 - ✅ Leere Query-Validierung
@@ -45,15 +46,16 @@ Die API liefert folgende Daten für jedes Suchergebnis:
 - Zeitstempel
 
 ### 3. Fehlerbehandlung
-- ✅ API-Fehler → Fallback zu Mock-Daten
-- ✅ Netzwerk-Fehler → Fallback zu Mock-Daten
+- ✅ Kein API-Key → Leeres Array mit Warnung im Log
+- ✅ API-Fehler → Leeres Array mit Fehlermeldung
+- ✅ Netzwerk-Fehler → Leeres Array mit Fehlermeldung
 - ✅ Ungültige Antwort → Leeres Array
 - ✅ Keine Ergebnisse → Leeres Array
 - ✅ Leere Query → Keine API-Anfrage
 
 ### 4. Tests
-- ✅ 39 Unit-Tests (alle bestanden)
-- ✅ Mock-Daten-Fallback getestet
+- ✅ 63 Unit-Tests (alle bestanden) (Update: Januar 2026)
+- ✅ Leere Array-Rückgabe ohne API-Key getestet
 - ✅ API-Aufruf mit gültigem API-Key getestet
 - ✅ Response-Parsing getestet
 - ✅ Fehlerbehandlung getestet
@@ -148,11 +150,40 @@ The open points for the eBay module have been successfully implemented. The ques
 **What was implemented:**
 - Full eBay Finding API integration
 - Real-time search results
-- Automatic fallback to mock data
+- **No mock data fallback** (updated January 2026)
+- API key required for eBay searches
 - Price filtering support
 - Comprehensive error handling
-- 39 passing unit tests
+- 63 passing unit tests (updated January 2026)
 - Complete documentation
 - 0 security vulnerabilities
+
+## Update: Januar 2026 - Mock-Daten entfernt
+
+**Änderung**: Die Mock-Daten-Fallbacks wurden aus dem eBay-Modul entfernt.
+
+### Was wurde geändert:
+- ❌ **Entfernt**: Automatischer Fallback zu Mock-Daten
+- ❌ **Entfernt**: `getMockResults()` Methode aus `EbaySearcher`
+- ✅ **Hinzugefügt**: Klare Fehlermeldungen wenn kein API-Key konfiguriert ist
+- ✅ **Hinzugefügt**: Hilfreiche Warnungen mit Link zur eBay Developer Seite
+
+### Warum diese Änderung:
+1. **Keine falschen Erwartungen**: Mock-Daten suggerierten, dass eBay-Suche ohne API-Key funktioniert
+2. **Echtheit**: Nur echte eBay-Daten werden angezeigt
+3. **Klarheit**: Benutzer wissen sofort, wenn sie einen API-Key benötigen
+
+### Verhalten jetzt:
+- **Mit API-Key**: Echte eBay-Suchergebnisse
+- **Ohne API-Key**: Leeres Array + Warnung im Console-Log
+- **Bei API-Fehler**: Leeres Array + Fehlermeldung (kein Fallback)
+
+### Für Benutzer:
+Um eBay-Suchen zu nutzen, wird nun ein API-Key **zwingend benötigt**:
+1. Registrierung bei [eBay Developers](https://developer.ebay.com/)
+2. API-Key in Umgebungsvariable `EBAY_API_KEY` setzen
+3. Oder in der App über die Einstellungen konfigurieren
+
+**Hinweis**: Kleinanzeigen verwendet weiterhin Mock-Daten, da es keine offizielle API gibt.
 
 The eBay module is now production-ready! 🎉
