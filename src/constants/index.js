@@ -23,6 +23,7 @@ export const STORAGE_KEYS = {
   MATCHES: 'matches',
   SETTINGS: 'app_settings',
   SECURE_OPENROUTER_KEY: 'secure_openrouter_api_key',
+  EBAY_RATE_LIMIT: 'ebay_rate_limit_tracker',
 };
 
 /**
@@ -42,6 +43,9 @@ export const API_CONFIG = {
     OPERATION: 'findItemsByKeywords',
     SERVICE_VERSION: '1.0.0',
     RESULTS_PER_PAGE: 20,
+    DAILY_RATE_LIMIT: 5000, // Free tier: 5,000 calls per day
+    WARNING_THRESHOLD: 0.8, // Warn at 80% usage (4,000 calls)
+    CRITICAL_THRESHOLD: 0.95, // Critical warning at 95% usage (4,750 calls)
   },
   KLEINANZEIGEN: {
     BASE_URL: 'https://www.kleinanzeigen.de/s-',

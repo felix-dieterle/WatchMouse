@@ -2,9 +2,13 @@ import axios from 'axios';
 import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS, CACHE_CONFIG } from '../constants';
 import { redactSensitiveData } from '../utils/security';
 import { Cache } from '../utils/performance';
+import { EbayRateLimiter } from '../utils/rateLimiter';
 
 // Initialize cache for search results
 const searchCache = new Cache(CACHE_CONFIG.MAX_CACHE_SIZE);
+
+// Initialize eBay rate limiter
+const ebayRateLimiter = new EbayRateLimiter();
 
 /**
  * Service for searching across multiple shopping platforms
@@ -22,6 +26,14 @@ export class SearchService {
       ebay: new EbaySearcher(),
       kleinanzeigen: new KleinanzeigenSearcher(),
     };
+  }
+
+  /**
+   * Get eBay API rate limit statistics
+   * @returns {Promise<Object>} Rate limit stats
+   */
+  async getEbayRateLimitStats() {
+    return await ebayRateLimiter.getStats();
   }
 
   /**
@@ -77,20 +89,41 @@ class EbaySearcher {
       return cached;
     }
     
-    // If no API key is configured, fall back to mock data
+    // If no API key is configured, return empty results
     if (!this.apiKey) {
-      console.log('eBay: No API key configured, using mock data');
-      return this.getMockResults(query, maxPrice, PLATFORMS.EBAY);
+      console.warn('eBay: No API key configured. Please add EBAY_API_KEY to enable eBay search.');
+      console.warn('eBay: Get your API key at https://developer.ebay.com/');
+      return [];
+    }
+
+    // Check rate limits before making API call
+    const limitCheck = await ebayRateLimiter.checkLimit();
+    
+    // Log warnings if approaching limit
+    if (limitCheck.warning) {
+      if (limitCheck.level === 'critical') {
+        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+      } else if (limitCheck.level === 'warning') {
+        console.warn(`⚠️ ${limitCheck.warning}`);
+      }
+    }
+    
+    // If limit exceeded, return empty results with error
+    if (!limitCheck.canProceed) {
+      console.error(`❌ ${limitCheck.warning}`);
+      return [];
     }
 
     try {
       const results = await this.searchWithAPI(query, maxPrice);
+      
       // Cache the results
       searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
       return results;
     } catch (error) {
-      console.error('eBay API error, falling back to mock data:', redactSensitiveData(error.message || ''));
-      return this.getMockResults(query, maxPrice, PLATFORMS.EBAY);
+      console.error('eBay API error:', redactSensitiveData(error.message || ''));
+      console.error('eBay: Failed to fetch results. Please check your API key and network connection.');
+      return [];
     }
   }
 
@@ -129,6 +162,9 @@ class EbaySearcher {
     const response = await axios.get(url, {
       timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
     });
+    
+    // Increment rate limit counter after successful HTTP request to eBay
+    await ebayRateLimiter.incrementCount();
     
     // Parse response
     return this.parseAPIResponse(response.data, query);
@@ -181,38 +217,7 @@ class EbaySearcher {
     }
   }
 
-  getMockResults(query, maxPrice, platform) {
-    // Generate mock results for demonstration
-    const mockItems = [
-      { title: `${query} - Good Condition`, price: 150 },
-      { title: `${query} Pro Max`, price: 250 },
-      { title: `Used ${query}`, price: 100 },
-      { title: `${query} with accessories`, price: 180 },
-    ];
 
-    const timestamp = Date.now();
-    return mockItems
-      .filter(item => !maxPrice || item.price <= maxPrice)
-      .map((item, idx) => {
-        // Generate realistic URLs based on platform
-        let url;
-        if (platform === PLATFORMS.EBAY) {
-          url = `https://www.ebay.de/itm/mock${timestamp}${idx}`;
-        } else if (platform === PLATFORMS.KLEINANZEIGEN) {
-          url = `https://www.kleinanzeigen.de/s-anzeige/mock${timestamp}${idx}`;
-        } else {
-          url = `https://${platform.toLowerCase()}.com/item/${idx}`;
-        }
-
-        return {
-          id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
-          title: item.title,
-          price: item.price,
-          platform: platform,
-          url: url,
-        };
-      });
-  }
 }
 
 /**
