@@ -155,7 +155,10 @@ function AppContent() {
     setNewSearchQuery('');
     setNewSearchMaxPrice('');
     setShowAddSearch(false);
-  }, [newSearchQuery, newSearchMaxPrice, searches, saveSearches]);
+    
+    // Automatically run the search after adding it
+    runSearch(newSearch);
+  }, [newSearchQuery, newSearchMaxPrice, searches, saveSearches, runSearch]);
 
   // Delete search
   const deleteSearch = useCallback((searchId) => {

@@ -193,13 +193,25 @@ class EbaySearcher {
     const timestamp = Date.now();
     return mockItems
       .filter(item => !maxPrice || item.price <= maxPrice)
-      .map((item, idx) => ({
-        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
-        title: item.title,
-        price: item.price,
-        platform: platform,
-        url: `https://${platform.toLowerCase()}.com/item/${idx}`,
-      }));
+      .map((item, idx) => {
+        // Generate realistic URLs based on platform
+        let url;
+        if (platform === PLATFORMS.EBAY) {
+          url = `https://www.ebay.de/itm/mock${timestamp}${idx}`;
+        } else if (platform === PLATFORMS.KLEINANZEIGEN) {
+          url = `https://www.kleinanzeigen.de/s-anzeige/mock${timestamp}${idx}`;
+        } else {
+          url = `https://${platform.toLowerCase()}.com/item/${idx}`;
+        }
+
+        return {
+          id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
+          title: item.title,
+          price: item.price,
+          platform: platform,
+          url: url,
+        };
+      });
   }
 }
 
@@ -234,7 +246,7 @@ class KleinanzeigenSearcher {
         title: item.title,
         price: item.price,
         platform: platform,
-        url: `https://www.kleinanzeigen.de/item/${idx}`,
+        url: `https://www.kleinanzeigen.de/s-anzeige/mock${timestamp}${idx}`,
       }));
   }
 }
