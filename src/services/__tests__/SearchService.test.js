@@ -138,6 +138,16 @@ describe('SearchService', () => {
       expect(results[0]).toHaveProperty('platform', 'eBay');
     });
 
+    it('should generate valid eBay URLs in mock data', async () => {
+      const results = await searchService.platforms.ebay.search('iPhone', 200);
+      
+      expect(results).toBeDefined();
+      expect(results.length).toBeGreaterThan(0);
+      results.forEach(result => {
+        expect(result.url).toMatch(/^https:\/\/www\.ebay\.de\/itm\/mock\d+$/);
+      });
+    });
+
     it('should call eBay API when API key is configured', async () => {
       // Mock successful API response
       const mockResponse = {
@@ -273,6 +283,19 @@ describe('SearchService', () => {
       
       expect(axios.get).not.toHaveBeenCalled();
       expect(results).toEqual([]);
+    });
+  });
+
+  describe('Kleinanzeigen integration', () => {
+    it('should generate valid Kleinanzeigen URLs in mock data', async () => {
+      const results = await searchService.platforms.kleinanzeigen.search('Sofa', 200);
+      
+      expect(results).toBeDefined();
+      expect(results.length).toBeGreaterThan(0);
+      results.forEach(result => {
+        expect(result.url).toMatch(/^https:\/\/www\.kleinanzeigen\.de\/s-anzeige\/mock\d+$/);
+        expect(result.platform).toBe('Kleinanzeigen');
+      });
     });
   });
 });
