@@ -14,7 +14,6 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ErrorBoundary } from 'react-error-boundary';
-import { SearchService } from './src/services/SearchService';
 import { AIService } from './src/services/AIService';
 import { BatchSearchService } from './src/services/BatchSearchService';
 import { SettingsService } from './src/services/SettingsService';
@@ -755,10 +754,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -773,6 +768,7 @@ const styles = StyleSheet.create({
   },
   runAllButton: {
     backgroundColor: '#2196F3',
+    marginRight: 8,
   },
   addSearchForm: {
     marginBottom: 15,

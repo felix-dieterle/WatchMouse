@@ -18,7 +18,9 @@ export class QueryOptimizer {
    * @returns {string} Normalized query
    */
   static normalizeQuery(query) {
-    if (!query) return '';
+    if (!query) {
+      return '';
+    }
     
     return query
       .toLowerCase()
@@ -99,7 +101,9 @@ export class BatchSearchOptimizer {
     const processed = new Set();
     
     for (const search of searches) {
-      if (processed.has(search.id)) continue;
+      if (processed.has(search.id)) {
+        continue;
+      }
       
       const group = {
         representative: search,
@@ -134,10 +138,14 @@ export class BatchSearchOptimizer {
    */
   static _arePriceCompatible(price1, price2) {
     // If both are null, they're compatible
-    if (price1 === null && price2 === null) return true;
+    if (price1 === null && price2 === null) {
+      return true;
+    }
     
     // If only one is null, not compatible
-    if (price1 === null || price2 === null) return false;
+    if (price1 === null || price2 === null) {
+      return false;
+    }
     
     // If prices are similar (within 20%), they're compatible
     const ratio = Math.max(price1, price2) / Math.min(price1, price2);
@@ -311,7 +319,9 @@ export class ResultDeduplicator {
    */
   static _areTitlesSimilar(title1, title2) {
     // Exact match
-    if (title1 === title2) return true;
+    if (title1 === title2) {
+      return true;
+    }
     
     // Calculate word overlap
     const words1 = new Set(title1.split(' '));
