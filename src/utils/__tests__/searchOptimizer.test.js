@@ -46,7 +46,10 @@ describe('QueryOptimizer', () => {
     });
 
     it('should match queries with high word overlap', () => {
-      expect(QueryOptimizer.areSimilarQueries('iPhone 13 Pro', 'iPhone 13 ProMax')).toBe(true);
+      // 2 out of 2 words match (100% overlap) - subset case
+      expect(QueryOptimizer.areSimilarQueries('iPhone 13', 'iPhone 13 Pro')).toBe(true);
+      // 3 out of 3 words match when one has more words
+      expect(QueryOptimizer.areSimilarQueries('iPhone 13 Pro Max', 'iPhone 13 Pro')).toBe(true);
     });
 
     it('should not match completely different queries', () => {

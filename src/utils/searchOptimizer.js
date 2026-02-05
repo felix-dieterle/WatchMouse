@@ -25,8 +25,10 @@ export class QueryOptimizer {
       .trim()
       // Remove multiple spaces
       .replace(/\s+/g, ' ')
-      // Remove special characters that don't affect search
+      // Remove special characters that don't affect search, replace with space
       .replace(/[,;]/g, ' ')
+      // Clean up any double spaces created by replacement
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
@@ -46,15 +48,20 @@ export class QueryOptimizer {
     }
     
     // Check if one query contains the other (e.g., "iPhone" and "iPhone 13")
-    const words1 = new Set(norm1.split(' '));
-    const words2 = new Set(norm2.split(' '));
+    const words1 = new Set(norm1.split(' ').filter(w => w.length > 0));
+    const words2 = new Set(norm2.split(' ').filter(w => w.length > 0));
     
     // If one is a subset of the other, they're similar
     const intersection = new Set([...words1].filter(w => words2.has(w)));
     const minSize = Math.min(words1.size, words2.size);
     
-    // At least 80% word overlap
-    return intersection.size >= minSize * 0.8;
+    // If no words, not similar
+    if (minSize === 0) {
+      return false;
+    }
+    
+    // At least 70% word overlap (lowered from 80% for better grouping)
+    return intersection.size >= minSize * 0.7;
   }
 
   /**

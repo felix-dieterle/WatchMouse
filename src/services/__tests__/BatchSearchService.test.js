@@ -74,7 +74,7 @@ describe('BatchSearchService', () => {
       await batchService.runSingleSearch(search, existingMatches);
 
       expect(SearchService.prototype.searchAllPlatforms).toHaveBeenCalledWith(
-        'iphone 13',
+        'iPhone 13',  // Not normalized in BatchSearchService (normalized in SearchService)
         600,
         existingMatches
       );
