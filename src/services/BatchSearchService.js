@@ -8,9 +8,6 @@
 import { SearchService } from './SearchService';
 import { AIService } from './AIService';
 import { BatchSearchOptimizer } from '../utils/searchOptimizer';
-// PERFORMANCE_CONFIG imported for potential future use
-// eslint-disable-next-line no-unused-vars
-import { PERFORMANCE_CONFIG } from '../constants';
 
 /**
  * BatchSearchService

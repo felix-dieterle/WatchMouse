@@ -126,6 +126,18 @@ describe('BatchSearchOptimizer', () => {
       expect(groups[0].members.length).toBe(2);
     });
 
+    it('should not group searches with zero or negative prices', () => {
+      const searches = [
+        { id: '1', query: 'iPhone 13', maxPrice: 0 },
+        { id: '2', query: 'iPhone 13', maxPrice: 500 },
+      ];
+
+      const groups = BatchSearchOptimizer.groupSimilarSearches(searches);
+      
+      // Should not group because one price is 0
+      expect(groups.length).toBe(2);
+    });
+
     it('should keep each search in only one group', () => {
       const searches = [
         { id: '1', query: 'iPhone', maxPrice: null },

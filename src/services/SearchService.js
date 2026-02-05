@@ -28,7 +28,8 @@ export class SearchService {
     };
     
     // AI mode affects search optimization strategy
-    this.aiModeEnabled = platformSettings.aiModeEnabled || false;
+    // Only enable if explicitly set to true
+    this.aiModeEnabled = platformSettings.aiModeEnabled === true;
     
     this.platforms = {
       ebay: new EbaySearcher(this.aiModeEnabled),

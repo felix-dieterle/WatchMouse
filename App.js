@@ -759,6 +759,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
+    flexShrink: 1, // Allow text to shrink if needed
   },
   addButton: {
     backgroundColor: '#4CAF50',

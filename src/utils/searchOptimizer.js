@@ -62,7 +62,7 @@ export class QueryOptimizer {
       return false;
     }
     
-    // At least 70% word overlap (lowered from 80% for better grouping)
+    // At least 70% word overlap for better grouping of similar searches
     return intersection.size >= minSize * 0.7;
   }
 
@@ -144,6 +144,11 @@ export class BatchSearchOptimizer {
     
     // If only one is null, not compatible
     if (price1 === null || price2 === null) {
+      return false;
+    }
+    
+    // Check for zero or negative prices
+    if (price1 <= 0 || price2 <= 0) {
       return false;
     }
     
