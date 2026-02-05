@@ -3,6 +3,11 @@ import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS, CACHE_CONFIG } from '../cons
 import { redactSensitiveData } from '../utils/security';
 import { Cache } from '../utils/performance';
 import { EbayRateLimiter } from '../utils/rateLimiter';
+import { 
+  QueryOptimizer, 
+  AIModeOptimizer, 
+  ResultDeduplicator 
+} from '../utils/searchOptimizer';
 
 // Initialize cache for search results
 const searchCache = new Cache(CACHE_CONFIG.MAX_CACHE_SIZE);
@@ -22,10 +27,23 @@ export class SearchService {
       kleinanzeigenEnabled: platformSettings.kleinanzeigenEnabled !== undefined ? platformSettings.kleinanzeigenEnabled : true,
     };
     
+    // AI mode affects search optimization strategy
+    // Only enable if explicitly set to true
+    this.aiModeEnabled = platformSettings.aiModeEnabled === true;
+    
     this.platforms = {
-      ebay: new EbaySearcher(),
+      ebay: new EbaySearcher(this.aiModeEnabled),
       kleinanzeigen: new KleinanzeigenSearcher(),
     };
+  }
+
+  /**
+   * Set AI mode for optimization strategy
+   * @param {boolean} enabled - Whether AI mode is enabled
+   */
+  setAIMode(enabled) {
+    this.aiModeEnabled = enabled;
+    this.platforms.ebay.setAIMode(enabled);
   }
 
   /**
@@ -38,14 +56,21 @@ export class SearchService {
 
   /**
    * Search all enabled platforms and combine results
+   * @param {string} query - Search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @param {Array} existingMatches - Existing matches to filter out duplicates
+   * @returns {Promise<Array>} Array of search results
    */
-  async searchAllPlatforms(query, maxPrice = null) {
+  async searchAllPlatforms(query, maxPrice = null, existingMatches = []) {
     const results = [];
+
+    // Normalize query for better cache hits
+    const normalizedQuery = QueryOptimizer.normalizeQuery(query);
 
     // Only search eBay if enabled
     if (this.platformSettings.ebayEnabled) {
       try {
-        const ebayResults = await this.platforms.ebay.search(query, maxPrice);
+        const ebayResults = await this.platforms.ebay.search(normalizedQuery, maxPrice);
         results.push(...ebayResults);
       } catch (error) {
         console.error('eBay search error:', redactSensitiveData(error.message || String(error)));
@@ -55,14 +80,20 @@ export class SearchService {
     // Only search Kleinanzeigen if enabled
     if (this.platformSettings.kleinanzeigenEnabled) {
       try {
-        const kleinanzeigenResults = await this.platforms.kleinanzeigen.search(query, maxPrice);
+        const kleinanzeigenResults = await this.platforms.kleinanzeigen.search(normalizedQuery, maxPrice);
         results.push(...kleinanzeigenResults);
       } catch (error) {
         console.error('Kleinanzeigen search error:', redactSensitiveData(error.message || String(error)));
       }
     }
 
-    return results;
+    // Deduplicate results by title similarity
+    const deduplicated = ResultDeduplicator.deduplicateByTitle(results);
+
+    // Filter out results that already exist in saved matches
+    const newResults = ResultDeduplicator.filterOutExisting(deduplicated, existingMatches);
+
+    return newResults;
   }
 }
 
@@ -71,11 +102,20 @@ export class SearchService {
  * Searches eBay using the Finding API with caching support
  */
 class EbaySearcher {
-  constructor() {
+  constructor(aiModeEnabled = false) {
     // Using eBay Finding API (requires API key for production)
     this.apiKey = process.env.EBAY_API_KEY || '';
     this.baseUrl = API_CONFIG.EBAY.BASE_URL;
     this.globalId = API_CONFIG.EBAY.GLOBAL_ID;
+    this.aiModeEnabled = aiModeEnabled;
+  }
+
+  /**
+   * Set AI mode for optimization strategy
+   * @param {boolean} enabled - Whether AI mode is enabled
+   */
+  setAIMode(enabled) {
+    this.aiModeEnabled = enabled;
   }
 
   async search(query, maxPrice) {
@@ -134,6 +174,18 @@ class EbaySearcher {
       return [];
     }
 
+    // Optimize results per page based on AI mode
+    const resultsPerPage = AIModeOptimizer.getOptimalResultsPerPage(
+      this.aiModeEnabled, 
+      API_CONFIG.EBAY.RESULTS_PER_PAGE
+    );
+
+    // Get optimal sort order based on AI mode
+    const sortOrder = AIModeOptimizer.getOptimalSortOrder(this.aiModeEnabled);
+
+    console.log(`eBay: Using ${this.aiModeEnabled ? 'AI' : 'non-AI'} mode optimization`);
+    console.log(`eBay: Fetching ${resultsPerPage} results with ${sortOrder} sort`);
+
     // Build eBay Finding API request
     const params = {
       'OPERATION-NAME': API_CONFIG.EBAY.OPERATION,
@@ -141,8 +193,8 @@ class EbaySearcher {
       'SECURITY-APPNAME': this.apiKey,
       'RESPONSE-DATA-FORMAT': 'JSON',
       'keywords': query,
-      'paginationInput.entriesPerPage': API_CONFIG.EBAY.RESULTS_PER_PAGE.toString(),
-      'sortOrder': 'StartTimeNewest',
+      'paginationInput.entriesPerPage': resultsPerPage.toString(),
+      'sortOrder': sortOrder,
       'GLOBAL-ID': this.globalId,
     };
 

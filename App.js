@@ -14,8 +14,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ErrorBoundary } from 'react-error-boundary';
-import { SearchService } from './src/services/SearchService';
 import { AIService } from './src/services/AIService';
+import { BatchSearchService } from './src/services/BatchSearchService';
 import { SettingsService } from './src/services/SettingsService';
 import Settings from './src/components/Settings';
 import { 
@@ -283,34 +283,66 @@ function AppContent() {
     return sorted;
   }, [matches, platformFilter, readFilter, matchFilter, matchSort]);
 
+  // Run all saved searches in batch
+  const runAllSearches = useCallback(async () => {
+    if (searches.length === 0) {
+      Alert.alert('No Searches', 'Please add some searches first.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Use BatchSearchService for optimized batch searching
+      const batchService = new BatchSearchService(settings);
+      
+      console.log(`Running ${searches.length} searches in batch...`);
+      
+      // Run all searches with existing matches to avoid duplicates
+      const result = await batchService.runBatchSearch(searches, matches);
+      
+      // Save new matches
+      const updatedMatches = [...matches, ...result.matches];
+      saveMatches(updatedMatches);
+      
+      // Determine if AI was used
+      const aiService = new AIService(settings.openrouterApiKey);
+      const aiEnabled = aiService.hasValidApiKey();
+      
+      // Show detailed results
+      const message = `Found ${result.matches.length} new matches!\n\n` +
+        `Successful: ${result.stats.successful}\n` +
+        `Failed: ${result.stats.failed}\n` +
+        `API calls saved: ${result.stats.apiCallsSaved}\n\n` +
+        `Mode: ${aiEnabled ? 'AI-powered' : 'Keyword matching'}`;
+      
+      Alert.alert('Batch Search Complete', message);
+    } catch (error) {
+      console.error('Error running batch search:', error);
+      Alert.alert('Error', 'Failed to run batch search. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searches, settings, matches, saveMatches]);
+
   // Run search for a specific query
   const runSearch = useCallback(async (search) => {
     setIsLoading(true);
     try {
-      // Create SearchService with platform settings
-      const searchService = new SearchService({
-        ebayEnabled: settings.ebayEnabled,
-        kleinanzeigenEnabled: settings.kleinanzeigenEnabled,
-      });
-      const results = await searchService.searchAllPlatforms(search.query, search.maxPrice);
+      // Use BatchSearchService for optimized searching
+      const batchService = new BatchSearchService(settings);
       
-      // Filter results using AI (with API key from settings)
-      const aiService = new AIService(settings.openrouterApiKey);
-      const matchedResults = await aiService.filterMatches(search.query, results);
+      // Run single search with existing matches to avoid duplicates
+      const newMatches = await batchService.runSingleSearch(search, matches);
       
       // Save new matches
-      const newMatches = matchedResults.map(result => ({
-        ...result,
-        searchId: search.id,
-        foundAt: new Date().toISOString(),
-        isRead: false, // Mark new matches as unread
-      }));
-      
       const updatedMatches = [...matches, ...newMatches];
       saveMatches(updatedMatches);
       
+      // Determine if AI was used
+      const aiService = new AIService(settings.openrouterApiKey);
       const aiEnabled = aiService.hasValidApiKey();
-      Alert.alert('Success', SUCCESS_MESSAGES.SEARCH_COMPLETE(matchedResults.length, aiEnabled));
+      
+      Alert.alert('Success', SUCCESS_MESSAGES.SEARCH_COMPLETE(newMatches.length, aiEnabled));
     } catch (error) {
       console.error('Error running search:', error);
       Alert.alert('Error', ERROR_MESSAGES.SEARCH_FAILED);
@@ -424,14 +456,27 @@ function AppContent() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Saved Searches ({searches.length})</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowAddSearch(!showAddSearch)}
-            >
-              <Text style={styles.buttonText}>
-                {showAddSearch ? 'Cancel' : 'Add Search'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              {searches.length > 0 && (
+                <TouchableOpacity
+                  style={[styles.addButton, styles.runAllButton]}
+                  onPress={runAllSearches}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.buttonText}>
+                    {isLoading ? 'Running...' : 'Run All'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setShowAddSearch(!showAddSearch)}
+              >
+                <Text style={styles.buttonText}>
+                  {showAddSearch ? 'Cancel' : 'Add Search'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {showAddSearch && (
@@ -713,12 +758,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
+    flexShrink: 1, // Allow text to shrink if needed
   },
   addButton: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 5,
+  },
+  runAllButton: {
+    backgroundColor: '#2196F3',
+    marginRight: 8,
   },
   addSearchForm: {
     marginBottom: 15,
