@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG, PERFORMANCE_CONFIG } from '../constants';
+import { AIModeOptimizer } from '../utils/searchOptimizer';
 
 /**
  * AI Service for filtering and matching search results using OpenRouter API
@@ -38,10 +39,26 @@ export class AIService {
       return this.fallbackFilter(searchQuery, results);
     }
 
+    // Pre-filter if too many results to reduce AI API costs
+    let resultsToFilter = results;
+    if (AIModeOptimizer.shouldPreFilter(results.length, true)) {
+      console.log(`AI: Pre-filtering ${results.length} results to reduce AI costs`);
+      resultsToFilter = this.fallbackFilter(searchQuery, results);
+      console.log(`AI: Pre-filtered to ${resultsToFilter.length} candidates`);
+    }
+
+    // If pre-filtering removed everything or left very few, just return those
+    if (resultsToFilter.length === 0) {
+      return [];
+    }
+    if (resultsToFilter.length <= 3) {
+      return resultsToFilter;
+    }
+
     try {
-      const prompt = this.buildFilterPrompt(searchQuery, results);
+      const prompt = this.buildFilterPrompt(searchQuery, resultsToFilter);
       const response = await this.callAI(prompt);
-      return this.parseAIResponse(response, results);
+      return this.parseAIResponse(response, resultsToFilter);
     } catch (error) {
       console.error('AI filtering error:', error);
       // Fallback to simple matching
