@@ -23,6 +23,7 @@ export const STORAGE_KEYS = {
   MATCHES: 'matches',
   SETTINGS: 'app_settings',
   SECURE_OPENROUTER_KEY: 'secure_openrouter_api_key',
+  SECURE_EBAY_KEY: 'secure_ebay_api_key',
   EBAY_RATE_LIMIT: 'ebay_rate_limit_tracker',
   OPENROUTER_RATE_LIMIT: 'openrouter_rate_limit_tracker',
 };
@@ -129,6 +130,7 @@ export const FILTER_OPTIONS = {
  */
 export const DEFAULT_SETTINGS = {
   openrouterApiKey: '',
+  ebayApiKey: '',
   ebayEnabled: true,
   kleinanzeigenEnabled: true,
 };

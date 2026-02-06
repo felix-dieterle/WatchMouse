@@ -65,12 +65,24 @@ The app includes a settings screen accessible via the gear icon (⚙️) in the 
   - Without an API key: Falls back to basic keyword matching
   - The app displays a warning banner when no API key is configured
 
+#### eBay Configuration
+- **eBay API Key**: Enter your API key from [eBay Developers](https://developer.ebay.com/)
+  - **Required** for eBay searches to work
+  - Get your free API key at https://developer.ebay.com/
+  - Free tier: 5,000 calls per day
+  - Without an API key: eBay searches will return no results
+
 #### Platform Modules
-- **eBay**: Enable/disable searching on eBay platform
+- **eBay**: Enable/disable searching on eBay platform (requires API key)
 - **Kleinanzeigen**: Enable/disable searching on Kleinanzeigen platform
 - At least one platform must be enabled
 
-All settings are saved locally on your device using AsyncStorage.
+#### API Rate Limits
+- View your daily API usage for eBay (e.g., 0/5000)
+- View your OpenRouter AI usage
+- Rate limits reset at midnight
+
+All settings are saved locally on your device. **API keys are stored securely** using SecureStore for enhanced security.
 
 ### API Keys (Legacy Configuration)
 
@@ -84,11 +96,12 @@ The app uses OpenRouter for AI-powered search matching. To use the AI features:
 For eBay integration:
 - Get an API key from [eBay Developers](https://developer.ebay.com/)
 - Set `EBAY_API_KEY=your_key_here`
-- **Note**: An API key is required for eBay searches. Without it, eBay will return no results.
+- **Note**: The recommended way is to configure the API key in the app Settings screen for better security.
 
 ## Usage
 
 1. **Configure Settings**: Tap the gear icon (⚙️) to open settings
+   - Add your eBay API key (required for eBay searches)
    - Add your OpenRouter API key for AI-powered matching (optional but recommended)
    - Enable/disable platforms (eBay, Kleinanzeigen) as needed
 2. **Add a Search**: Tap "Add Search" and enter your search query and optional max price

@@ -15,18 +15,23 @@ describe('SettingsService', () => {
         ebayEnabled: true,
         kleinanzeigenEnabled: false,
       };
-      const mockApiKey = 'test-api-key';
+      const mockOpenRouterApiKey = 'test-openrouter-key';
+      const mockEbayApiKey = 'test-ebay-key';
       
       AsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockNonSensitiveSettings));
-      SecureStore.getItemAsync.mockResolvedValue(mockApiKey);
+      SecureStore.getItemAsync
+        .mockResolvedValueOnce(mockOpenRouterApiKey)
+        .mockResolvedValueOnce(mockEbayApiKey);
       
       const settings = await SettingsService.loadSettings();
       
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('app_settings');
       expect(SecureStore.getItemAsync).toHaveBeenCalledWith('secure_openrouter_api_key');
+      expect(SecureStore.getItemAsync).toHaveBeenCalledWith('secure_ebay_api_key');
       expect(settings).toEqual({
         ...mockNonSensitiveSettings,
-        openrouterApiKey: mockApiKey,
+        openrouterApiKey: mockOpenRouterApiKey,
+        ebayApiKey: mockEbayApiKey,
       });
     });
 
@@ -38,6 +43,7 @@ describe('SettingsService', () => {
       
       expect(settings).toEqual({
         openrouterApiKey: '',
+        ebayApiKey: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
       });
@@ -51,6 +57,7 @@ describe('SettingsService', () => {
       
       expect(settings).toEqual({
         openrouterApiKey: '',
+        ebayApiKey: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
       });
@@ -66,6 +73,7 @@ describe('SettingsService', () => {
       const settings = await SettingsService.loadSettings();
       
       expect(settings.openrouterApiKey).toBe('');
+      expect(settings.ebayApiKey).toBe('');
       expect(settings.ebayEnabled).toBe(true);
       expect(settings.kleinanzeigenEnabled).toBe(true);
     });
@@ -74,7 +82,8 @@ describe('SettingsService', () => {
   describe('saveSettings', () => {
     test('should save settings to AsyncStorage and SecureStore', async () => {
       const settings = {
-        openrouterApiKey: 'new-api-key',
+        openrouterApiKey: 'new-openrouter-key',
+        ebayApiKey: 'new-ebay-key',
         ebayEnabled: false,
         kleinanzeigenEnabled: true,
       };
@@ -93,14 +102,19 @@ describe('SettingsService', () => {
       );
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
         'secure_openrouter_api_key',
-        'new-api-key'
+        'new-openrouter-key'
+      );
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+        'secure_ebay_api_key',
+        'new-ebay-key'
       );
       expect(result).toBe(true);
     });
 
-    test('should delete API key from SecureStore when empty', async () => {
+    test('should delete API keys from SecureStore when empty', async () => {
       const settings = {
         openrouterApiKey: '',
+        ebayApiKey: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: false,
       };
@@ -111,13 +125,17 @@ describe('SettingsService', () => {
       const result = await SettingsService.saveSettings(settings);
       
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_openrouter_api_key');
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_ebay_api_key');
       expect(result).toBe(true);
     });
 
     test('should return false on save error', async () => {
       AsyncStorage.setItem.mockRejectedValue(new Error('Storage error'));
       
-      const result = await SettingsService.saveSettings({ openrouterApiKey: 'key' });
+      const result = await SettingsService.saveSettings({ 
+        openrouterApiKey: 'key',
+        ebayApiKey: 'ebay-key'
+      });
       
       expect(result).toBe(false);
     });

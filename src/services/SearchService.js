@@ -32,7 +32,7 @@ export class SearchService {
     this.aiModeEnabled = platformSettings.aiModeEnabled === true;
     
     this.platforms = {
-      ebay: new EbaySearcher(this.aiModeEnabled),
+      ebay: new EbaySearcher(this.aiModeEnabled, platformSettings.ebayApiKey),
       kleinanzeigen: new KleinanzeigenSearcher(),
     };
   }
@@ -44,6 +44,14 @@ export class SearchService {
   setAIMode(enabled) {
     this.aiModeEnabled = enabled;
     this.platforms.ebay.setAIMode(enabled);
+  }
+
+  /**
+   * Update eBay API key
+   * @param {string} apiKey - eBay API key
+   */
+  setEbayApiKey(apiKey) {
+    this.platforms.ebay.setApiKey(apiKey);
   }
 
   /**
@@ -102,9 +110,10 @@ export class SearchService {
  * Searches eBay using the Finding API with caching support
  */
 class EbaySearcher {
-  constructor(aiModeEnabled = false) {
+  constructor(aiModeEnabled = false, apiKey = '') {
     // Using eBay Finding API (requires API key for production)
-    this.apiKey = process.env.EBAY_API_KEY || '';
+    // Prioritize passed apiKey, fallback to environment variable
+    this.apiKey = apiKey || process.env.EBAY_API_KEY || '';
     this.baseUrl = API_CONFIG.EBAY.BASE_URL;
     this.globalId = API_CONFIG.EBAY.GLOBAL_ID;
     this.aiModeEnabled = aiModeEnabled;
@@ -116,6 +125,19 @@ class EbaySearcher {
    */
   setAIMode(enabled) {
     this.aiModeEnabled = enabled;
+  }
+
+  /**
+   * Update eBay API key
+   * @param {string} apiKey - eBay API key
+   */
+  setApiKey(apiKey) {
+    if (typeof apiKey !== 'string' && apiKey !== null && apiKey !== undefined) {
+      console.warn('eBay API key must be a string, received:', typeof apiKey);
+      this.apiKey = '';
+      return;
+    }
+    this.apiKey = apiKey || '';
   }
 
   async search(query, maxPrice) {
