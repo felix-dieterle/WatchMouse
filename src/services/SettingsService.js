@@ -22,13 +22,22 @@ export const SettingsService = {
         };
       }
       
-      // Load API key securely from SecureStore
+      // Load OpenRouter API key securely from SecureStore
       try {
         const secureApiKey = await SecureStore.getItemAsync(STORAGE_KEYS.SECURE_OPENROUTER_KEY);
         settings.openrouterApiKey = secureApiKey || '';
       } catch (secureError) {
-        console.error('Error loading API key from SecureStore:', secureError);
+        console.error('Error loading OpenRouter API key from SecureStore:', secureError);
         settings.openrouterApiKey = '';
+      }
+      
+      // Load eBay API key securely from SecureStore
+      try {
+        const secureEbayKey = await SecureStore.getItemAsync(STORAGE_KEYS.SECURE_EBAY_KEY);
+        settings.ebayApiKey = secureEbayKey || '';
+      } catch (secureError) {
+        console.error('Error loading eBay API key from SecureStore:', secureError);
+        settings.ebayApiKey = '';
       }
       
       return settings;
@@ -46,13 +55,13 @@ export const SettingsService = {
    */
   async saveSettings(settings) {
     try {
-      // Extract API key for secure storage
-      const { openrouterApiKey, ...nonSensitiveSettings } = settings;
+      // Extract API keys for secure storage
+      const { openrouterApiKey, ebayApiKey, ...nonSensitiveSettings } = settings;
       
       // Save non-sensitive settings to AsyncStorage
       await AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(nonSensitiveSettings));
       
-      // Save API key securely to SecureStore
+      // Save OpenRouter API key securely to SecureStore
       if (openrouterApiKey) {
         await SecureStore.setItemAsync(STORAGE_KEYS.SECURE_OPENROUTER_KEY, openrouterApiKey);
       } else {
@@ -61,7 +70,20 @@ export const SettingsService = {
           await SecureStore.deleteItemAsync(STORAGE_KEYS.SECURE_OPENROUTER_KEY);
         } catch (deleteError) {
           // Ignore errors when deleting non-existent keys
-          console.log('No secure key to delete or deletion failed:', deleteError.message);
+          console.log('No secure OpenRouter key to delete or deletion failed:', deleteError.message);
+        }
+      }
+      
+      // Save eBay API key securely to SecureStore
+      if (ebayApiKey) {
+        await SecureStore.setItemAsync(STORAGE_KEYS.SECURE_EBAY_KEY, ebayApiKey);
+      } else {
+        // Delete the key if it's empty
+        try {
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.SECURE_EBAY_KEY);
+        } catch (deleteError) {
+          // Ignore errors when deleting non-existent keys
+          console.log('No secure eBay key to delete or deletion failed:', deleteError.message);
         }
       }
       

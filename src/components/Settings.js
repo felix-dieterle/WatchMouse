@@ -16,6 +16,7 @@ import RateLimitIndicator from './RateLimitIndicator';
 
 export default function Settings({ onClose, onSettingsChange }) {
   const [apiKey, setApiKey] = useState('');
+  const [ebayApiKey, setEbayApiKey] = useState('');
   const [ebayEnabled, setEbayEnabled] = useState(true);
   const [kleinanzeigenEnabled, setKleinanzeigenEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +57,7 @@ export default function Settings({ onClose, onSettingsChange }) {
     try {
       const settings = await SettingsService.loadSettings();
       setApiKey(settings.openrouterApiKey || '');
+      setEbayApiKey(settings.ebayApiKey || '');
       setEbayEnabled(settings.ebayEnabled !== undefined ? settings.ebayEnabled : true);
       setKleinanzeigenEnabled(settings.kleinanzeigenEnabled !== undefined ? settings.kleinanzeigenEnabled : true);
     } catch (error) {
@@ -69,6 +71,7 @@ export default function Settings({ onClose, onSettingsChange }) {
     try {
       const settings = {
         openrouterApiKey: apiKey.trim(),
+        ebayApiKey: ebayApiKey.trim(),
         ebayEnabled,
         kleinanzeigenEnabled,
       };
@@ -155,6 +158,28 @@ export default function Settings({ onClose, onSettingsChange }) {
           </Text>
         </View>
 
+        {/* eBay API Key Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>eBay Configuration</Text>
+          <Text style={styles.label}>eBay API Key</Text>
+          <TextInput
+            style={styles.input}
+            value={ebayApiKey}
+            onChangeText={setEbayApiKey}
+            placeholder="Enter your eBay API key"
+            placeholderTextColor="#999"
+            secureTextEntry={true}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.helperText}>
+            Get your API key at: https://developer.ebay.com/
+          </Text>
+          <Text style={styles.helperText}>
+            {ebayApiKey.trim() ? '✓ API key configured - eBay search enabled' : '⚠ No API key - eBay search disabled'}
+          </Text>
+        </View>
+
         {/* Platform Modules Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Platform Modules</Text>
@@ -206,7 +231,7 @@ export default function Settings({ onClose, onSettingsChange }) {
             usagePercent={ebayRateLimit.usagePercent}
             count={ebayRateLimit.count}
             limit={ebayRateLimit.limit}
-            enabled={ebayEnabled}
+            enabled={ebayEnabled && ebayApiKey.trim() !== ''}
           />
           
           <RateLimitIndicator
