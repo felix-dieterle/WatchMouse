@@ -181,8 +181,16 @@ The open points for the eBay module have been successfully implemented. The ques
 ### Für Benutzer:
 Um eBay-Suchen zu nutzen, wird nun ein API-Key **zwingend benötigt**:
 1. Registrierung bei [eBay Developers](https://developer.ebay.com/)
-2. API-Key in Umgebungsvariable `EBAY_API_KEY` setzen
-3. Oder in der App über die Einstellungen konfigurieren
+2. API-Key konfigurieren über:
+   - **Empfohlen**: In der App über die Einstellungen (Settings) eingeben
+   - **Alternative**: In Umgebungsvariable `EBAY_API_KEY` setzen
+
+**Update Februar 2026**: eBay API-Key kann jetzt direkt in der App über die Einstellungen konfiguriert werden!
+- Öffne die App und gehe zu "Settings"
+- Scrolle zu "eBay Configuration"
+- Gib deinen eBay API-Key ein
+- Der Key wird sicher in SecureStore gespeichert
+- Die Rate-Limit-Anzeige zeigt den aktuellen Verbrauch (z.B. 0/5000)
 
 **Hinweis**: Kleinanzeigen verwendet weiterhin Mock-Daten, da es keine offizielle API gibt.
 
