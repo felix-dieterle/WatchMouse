@@ -26,14 +26,17 @@ describe('Settings Component', () => {
       kleinanzeigenEnabled: true,
     });
     
-    // Mock rate limit stats
-    SearchService.prototype.getEbayRateLimitStats = jest.fn().mockResolvedValue({
-      count: 100,
-      limit: 5000,
-      remaining: 4900,
-      usagePercent: 0.02,
-    });
+    // Mock SearchService instance methods
+    SearchService.mockImplementation(() => ({
+      getEbayRateLimitStats: jest.fn().mockResolvedValue({
+        count: 100,
+        limit: 5000,
+        remaining: 4900,
+        usagePercent: 0.02,
+      }),
+    }));
     
+    // Mock AIService static method
     AIService.getOpenRouterRateLimitStats = jest.fn().mockResolvedValue({
       count: 50,
       limit: null,
