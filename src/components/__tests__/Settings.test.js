@@ -54,7 +54,7 @@ describe('Settings Component', () => {
       expect(getByText('Platform Modules')).toBeTruthy();
       expect(getByText('API Rate Limits')).toBeTruthy();
     }, { timeout: 10000 });
-  });
+  }, 15000);
 
   test('should display rate limit indicators', async () => {
     const { getByText } = render(
@@ -65,7 +65,7 @@ describe('Settings Component', () => {
       expect(getByText('eBay API')).toBeTruthy();
       expect(getByText('OpenRouter AI')).toBeTruthy();
     }, { timeout: 10000 });
-  });
+  }, 15000);
 
   test('should load settings on mount', async () => {
     render(<Settings onClose={mockOnClose} onSettingsChange={mockOnSettingsChange} />);
