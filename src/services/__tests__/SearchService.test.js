@@ -31,6 +31,21 @@ describe('SearchService', () => {
         kleinanzeigenEnabled: true,
       });
     });
+
+    it('should accept eBay API key via settings', () => {
+      const apiKey = 'test-ebay-api-key';
+      const customService = new SearchService({
+        ebayApiKey: apiKey,
+      });
+      expect(customService.platforms.ebay.apiKey).toBe(apiKey);
+    });
+
+    it('should use environment variable when no API key provided in settings', () => {
+      process.env.EBAY_API_KEY = 'env-api-key';
+      const customService = new SearchService({});
+      expect(customService.platforms.ebay.apiKey).toBe('env-api-key');
+      delete process.env.EBAY_API_KEY;
+    });
   });
 
   describe('searchAllPlatforms', () => {
@@ -339,6 +354,20 @@ describe('SearchService', () => {
       
       expect(axios.get).not.toHaveBeenCalled();
       expect(results).toEqual([]);
+    });
+  });
+
+  describe('API key management', () => {
+    it('should allow updating eBay API key via setEbayApiKey method', () => {
+      const newApiKey = 'updated-api-key';
+      searchService.setEbayApiKey(newApiKey);
+      expect(searchService.platforms.ebay.apiKey).toBe(newApiKey);
+    });
+
+    it('should allow setting API key to empty string', () => {
+      searchService.setEbayApiKey('test-key');
+      searchService.setEbayApiKey('');
+      expect(searchService.platforms.ebay.apiKey).toBe('');
     });
   });
 
