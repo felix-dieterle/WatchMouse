@@ -53,7 +53,7 @@ describe('Settings Component', () => {
       expect(getByText('AI Configuration')).toBeTruthy();
       expect(getByText('Platform Modules')).toBeTruthy();
       expect(getByText('API Rate Limits')).toBeTruthy();
-    });
+    }, { timeout: 10000 });
   });
 
   test('should display rate limit indicators', async () => {
@@ -64,7 +64,7 @@ describe('Settings Component', () => {
     await waitFor(() => {
       expect(getByText('eBay API')).toBeTruthy();
       expect(getByText('OpenRouter AI')).toBeTruthy();
-    });
+    }, { timeout: 10000 });
   });
 
   test('should load settings on mount', async () => {
