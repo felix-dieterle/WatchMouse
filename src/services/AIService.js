@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { API_CONFIG, PERFORMANCE_CONFIG } from '../constants';
 import { AIModeOptimizer } from '../utils/searchOptimizer';
+import { OpenRouterRateLimiter } from '../utils/openRouterRateLimiter';
+
+// Initialize OpenRouter rate limiter
+const openRouterRateLimiter = new OpenRouterRateLimiter();
 
 /**
  * AI Service for filtering and matching search results using OpenRouter API
@@ -24,6 +28,14 @@ export class AIService {
    */
   hasValidApiKey() {
     return !!(this.apiKey && this.apiKey.trim().length > 0);
+  }
+
+  /**
+   * Get OpenRouter API rate limit statistics
+   * @returns {Promise<Object>} Rate limit stats
+   */
+  static async getOpenRouterRateLimitStats() {
+    return await openRouterRateLimiter.getStats();
   }
 
   /**
@@ -121,6 +133,9 @@ Indices of matching results:`;
         timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
       }
     );
+
+    // Increment rate limit counter after successful API call
+    await openRouterRateLimiter.incrementCount();
 
     // Validate response structure
     if (!response.data?.choices?.[0]?.message?.content) {

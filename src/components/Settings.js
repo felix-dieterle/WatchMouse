@@ -10,16 +10,47 @@ import {
   Alert,
 } from 'react-native';
 import { SettingsService } from '../services/SettingsService';
+import { SearchService } from '../services/SearchService';
+import { AIService } from '../services/AIService';
+import RateLimitIndicator from './RateLimitIndicator';
 
 export default function Settings({ onClose, onSettingsChange }) {
   const [apiKey, setApiKey] = useState('');
   const [ebayEnabled, setEbayEnabled] = useState(true);
   const [kleinanzeigenEnabled, setKleinanzeigenEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Rate limit states
+  const [ebayRateLimit, setEbayRateLimit] = useState({ count: 0, limit: 5000, usagePercent: 0 });
+  const [openRouterRateLimit, setOpenRouterRateLimit] = useState({ count: 0, limit: null, usagePercent: 0 });
 
   useEffect(() => {
     loadSettings();
+    loadRateLimitStats();
   }, []);
+
+  const loadRateLimitStats = async () => {
+    try {
+      // Load eBay rate limit stats
+      const searchService = new SearchService();
+      const ebayStats = await searchService.getEbayRateLimitStats();
+      setEbayRateLimit({
+        count: ebayStats.count,
+        limit: ebayStats.limit,
+        usagePercent: ebayStats.usagePercent,
+      });
+
+      // Load OpenRouter rate limit stats
+      const openRouterStats = await AIService.getOpenRouterRateLimitStats();
+      setOpenRouterRateLimit({
+        count: openRouterStats.count,
+        limit: openRouterStats.limit,
+        usagePercent: 0, // No hard limit for OpenRouter
+      });
+    } catch (error) {
+      console.error('Error loading rate limit stats:', error);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -161,6 +192,30 @@ export default function Settings({ onClose, onSettingsChange }) {
               ⚠ At least one platform should be enabled
             </Text>
           )}
+        </View>
+
+        {/* API Rate Limits Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>API Rate Limits</Text>
+          <Text style={styles.helperText} style={{ marginBottom: 12 }}>
+            Daily API usage tracking (resets at midnight)
+          </Text>
+          
+          <RateLimitIndicator
+            apiName="eBay API"
+            usagePercent={ebayRateLimit.usagePercent}
+            count={ebayRateLimit.count}
+            limit={ebayRateLimit.limit}
+            enabled={ebayEnabled}
+          />
+          
+          <RateLimitIndicator
+            apiName="OpenRouter AI"
+            usagePercent={openRouterRateLimit.usagePercent}
+            count={openRouterRateLimit.count}
+            limit="N/A"
+            enabled={apiKey.trim() !== ''}
+          />
         </View>
       </ScrollView>
 
