@@ -3,9 +3,13 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import Settings from '../Settings';
 import { SettingsService } from '../../services/SettingsService';
+import { SearchService } from '../../services/SearchService';
+import { AIService } from '../../services/AIService';
 
-// Mock SettingsService
+// Mock services
 jest.mock('../../services/SettingsService');
+jest.mock('../../services/SearchService');
+jest.mock('../../services/AIService');
 
 // Mock Alert
 jest.spyOn(Alert, 'alert');
@@ -21,6 +25,19 @@ describe('Settings Component', () => {
       ebayEnabled: true,
       kleinanzeigenEnabled: true,
     });
+    
+    // Mock rate limit stats
+    SearchService.prototype.getEbayRateLimitStats = jest.fn().mockResolvedValue({
+      count: 100,
+      limit: 5000,
+      remaining: 4900,
+      usagePercent: 0.02,
+    });
+    
+    AIService.getOpenRouterRateLimitStats = jest.fn().mockResolvedValue({
+      count: 50,
+      limit: null,
+    });
   });
 
   test('should render settings screen', async () => {
@@ -32,6 +49,18 @@ describe('Settings Component', () => {
       expect(getByText('Settings')).toBeTruthy();
       expect(getByText('AI Configuration')).toBeTruthy();
       expect(getByText('Platform Modules')).toBeTruthy();
+      expect(getByText('API Rate Limits')).toBeTruthy();
+    });
+  });
+
+  test('should display rate limit indicators', async () => {
+    const { getByText } = render(
+      <Settings onClose={mockOnClose} onSettingsChange={mockOnSettingsChange} />
+    );
+
+    await waitFor(() => {
+      expect(getByText('eBay API')).toBeTruthy();
+      expect(getByText('OpenRouter AI')).toBeTruthy();
     });
   });
 

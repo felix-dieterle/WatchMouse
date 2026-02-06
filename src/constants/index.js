@@ -24,6 +24,7 @@ export const STORAGE_KEYS = {
   SETTINGS: 'app_settings',
   SECURE_OPENROUTER_KEY: 'secure_openrouter_api_key',
   EBAY_RATE_LIMIT: 'ebay_rate_limit_tracker',
+  OPENROUTER_RATE_LIMIT: 'openrouter_rate_limit_tracker',
 };
 
 /**
