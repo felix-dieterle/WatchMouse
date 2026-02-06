@@ -132,6 +132,11 @@ class EbaySearcher {
    * @param {string} apiKey - eBay API key
    */
   setApiKey(apiKey) {
+    if (typeof apiKey !== 'string' && apiKey !== null && apiKey !== undefined) {
+      console.warn('eBay API key must be a string, received:', typeof apiKey);
+      this.apiKey = '';
+      return;
+    }
     this.apiKey = apiKey || '';
   }
 
