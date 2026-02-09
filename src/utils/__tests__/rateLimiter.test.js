@@ -165,7 +165,7 @@ describe('EbayRateLimiter', () => {
       const result = await rateLimiter.checkLimit();
 
       expect(result.canProceed).toBe(false);
-      expect(result.warning).toContain('Invalid rate limit configuration');
+      expect(result.warning).toContain('Invalid eBay rate limit configuration');
       expect(result.level).toBe('error');
     });
   });
