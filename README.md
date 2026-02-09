@@ -67,10 +67,20 @@ The app includes a settings screen accessible via the gear icon (⚙️) in the 
 
 #### eBay Configuration
 - **eBay API Key**: Enter your API key from [eBay Developers](https://developer.ebay.com/)
-  - **Required** for eBay searches to work
+  - **Recommended** for best eBay search experience
   - Get your free API key at https://developer.ebay.com/
   - Free tier: 5,000 calls per day
-  - Without an API key: eBay searches will return no results
+  - Without an API key: Falls back to Google Custom Search (if configured)
+
+#### Google Custom Search (eBay Fallback)
+- **Alternative to eBay API**: Use Google Custom Search to search eBay without an eBay API key
+  - **Instant setup**: No approval process required
+  - Get your API key at: https://console.cloud.google.com/
+  - Create a Custom Search Engine at: https://programmablesearchengine.google.com/
+  - Free tier: 100 queries per day
+  - **Toggle**: Enable "Use Google as eBay Fallback" to activate
+  - **Note**: Price extraction is best-effort (parsed from snippets)
+  - See [Google Custom Search Guide](docs/GOOGLE_CUSTOM_SEARCH_GUIDE.md) for detailed setup instructions
 
 #### Platform Modules
 - **eBay**: Enable/disable searching on eBay platform (requires API key)
@@ -79,6 +89,7 @@ The app includes a settings screen accessible via the gear icon (⚙️) in the 
 
 #### API Rate Limits
 - View your daily API usage for eBay (e.g., 0/5000)
+- View your Google Custom Search usage (e.g., 42/100) when enabled
 - View your OpenRouter AI usage
 - Rate limits reset at midnight
 
@@ -94,14 +105,21 @@ The app uses OpenRouter for AI-powered search matching. To use the AI features:
 2. Set the environment variable: `OPENROUTER_API_KEY=your_key_here`
 
 For eBay integration:
-- Get an API key from [eBay Developers](https://developer.ebay.com/)
-- Set `EBAY_API_KEY=your_key_here`
-- **Note**: The recommended way is to configure the API key in the app Settings screen for better security.
+- **Option 1 (Recommended)**: Get an API key from [eBay Developers](https://developer.ebay.com/)
+  - Set `EBAY_API_KEY=your_key_here`
+  - Best for production use (5,000 queries/day)
+- **Option 2 (Quick Start)**: Use Google Custom Search API as a fallback
+  - Set `GOOGLE_API_KEY=your_key_here`
+  - Set `GOOGLE_CX=your_search_engine_id`
+  - Enable "Use Google as eBay Fallback" in Settings
+  - See [Google Custom Search Guide](docs/GOOGLE_CUSTOM_SEARCH_GUIDE.md) for setup
+- **Note**: The recommended way is to configure API keys in the app Settings screen for better security.
 
 ## Usage
 
 1. **Configure Settings**: Tap the gear icon (⚙️) to open settings
-   - Add your eBay API key (required for eBay searches)
+   - **Quick Start**: Add Google API credentials for instant eBay search access (100 queries/day free)
+   - **Production**: Add your eBay API key for best experience (5,000 queries/day free)
    - Add your OpenRouter API key for AI-powered matching (optional but recommended)
    - Enable/disable platforms (eBay, Kleinanzeigen) as needed
 2. **Add a Search**: Tap "Add Search" and enter your search query and optional max price

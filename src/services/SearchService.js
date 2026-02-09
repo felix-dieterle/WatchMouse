@@ -442,8 +442,12 @@ class EbaySearcher {
         })
         // Filter by max price if specified (only if price was extracted)
         .filter(item => {
-          if (!maxPrice) return true;
-          if (item.price === 0) return true; // Include items where price couldn't be extracted
+          if (!maxPrice) {
+            return true;
+          }
+          if (item.price === 0) {
+            return true; // Include items where price couldn't be extracted
+          }
           return item.price <= maxPrice;
         });
 
