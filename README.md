@@ -1,6 +1,6 @@
 # WatchMouse 🐭
 
-A smart Android app that monitors shopping platforms (eBay, Kleinanzeigen) and finds deals matching your saved searches using AI-powered matching.
+A smart Android app that monitors shopping platforms (eBay, Kleinanzeigen, mobile.de, AutoScout24) and finds deals matching your saved searches using AI-powered matching.
 
 ## Features
 
@@ -8,18 +8,19 @@ A smart Android app that monitors shopping platforms (eBay, Kleinanzeigen) and f
 - 🤖 **AI-Powered Matching**: Uses AI (via OpenRouter) to find relevant items even with typos or variations
   - Automatically falls back to keyword matching when no API key is configured
 - ⚙️ **Configurable Settings**: Easy-to-use settings screen to manage API keys and platform preferences
-- 🔧 **Module System**: Enable/disable individual platforms (eBay, Kleinanzeigen) as needed
+- 🔧 **Module System**: Enable/disable individual platforms (eBay, Kleinanzeigen, Used Cars) as needed
+- 🚗 **Used Car Search**: Search mobile.de and AutoScout24 for used cars via Google Custom Search
 - 💰 **Price Filtering**: Set maximum price limits for your searches
 - 📱 **Android App**: Native mobile experience built with React Native/Expo
 - 🔗 **Easy Navigation**: One-tap access to open offer pages directly in your browser
 - 🔔 **Deal Notifications**: Get notified when new matching items are found
-- 🏷️ **Multi-Platform Support**: Currently supports eBay and Kleinanzeigen
+- 🏷️ **Multi-Platform Support**: Currently supports eBay, Kleinanzeigen, mobile.de, and AutoScout24
 - 🔎 **Advanced Search & Filter**: Filter and sort your saved searches and matches
   - Search/filter saved searches by query text
   - Search/filter matches by title
   - Sort searches by date or name
   - Sort matches by date, price, or title
-  - Filter matches by platform (eBay, Kleinanzeigen)
+  - Filter matches by platform (eBay, Kleinanzeigen, mobile.de, AutoScout24)
   - Filter matches by read/unread status
   - Mark matches as read/unread to track what you've reviewed
   - Mark all matches as read with one tap
@@ -83,8 +84,12 @@ The app includes a settings screen accessible via the gear icon (⚙️) in the 
   - See [Google Custom Search Guide](docs/GOOGLE_CUSTOM_SEARCH_GUIDE.md) for detailed setup instructions
 
 #### Platform Modules
-- **eBay**: Enable/disable searching on eBay platform (requires API key)
+- **eBay**: Enable/disable searching on eBay platform (requires API key or Google fallback)
 - **Kleinanzeigen**: Enable/disable searching on Kleinanzeigen platform
+- **Used Cars (mobile.de, AutoScout24)**: Enable/disable used car search (requires Google Custom Search API)
+  - Searches German used car platforms via Google
+  - Extracts price, year, and mileage when available
+  - See [Used Car Search Guide](docs/USED_CAR_SEARCH.md) for details
 - At least one platform must be enabled
 
 #### API Rate Limits
