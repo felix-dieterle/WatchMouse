@@ -27,6 +27,7 @@ export class SearchService {
       ebayEnabled: platformSettings.ebayEnabled !== undefined ? platformSettings.ebayEnabled : true,
       kleinanzeigenEnabled: platformSettings.kleinanzeigenEnabled !== undefined ? platformSettings.kleinanzeigenEnabled : true,
       useGoogleForEbay: platformSettings.useGoogleForEbay === true,
+      usedCarsEnabled: platformSettings.usedCarsEnabled === true,
     };
     
     // AI mode affects search optimization strategy
@@ -42,6 +43,10 @@ export class SearchService {
         this.platformSettings.useGoogleForEbay
       ),
       kleinanzeigen: new KleinanzeigenSearcher(),
+      usedCars: new UsedCarSearcher(
+        platformSettings.googleApiKey,
+        platformSettings.googleCx
+      ),
     };
   }
 
@@ -108,6 +113,16 @@ export class SearchService {
         results.push(...kleinanzeigenResults);
       } catch (error) {
         console.error('Kleinanzeigen search error:', redactSensitiveData(error.message || String(error)));
+      }
+    }
+
+    // Only search Used Cars platforms if enabled
+    if (this.platformSettings.usedCarsEnabled) {
+      try {
+        const usedCarResults = await this.platforms.usedCars.search(normalizedQuery, maxPrice);
+        results.push(...usedCarResults);
+      } catch (error) {
+        console.error('Used Cars search error:', redactSensitiveData(error.message || String(error)));
       }
     }
 
@@ -494,5 +509,210 @@ class KleinanzeigenSearcher {
         platform: platform,
         url: `https://www.kleinanzeigen.de/s-anzeige/mock${timestamp}${idx}`,
       }));
+  }
+}
+
+/**
+ * Used Car platform searcher
+ * Searches mobile.de and AutoScout24 using Google Custom Search API
+ */
+class UsedCarSearcher {
+  constructor(googleApiKey = '', googleCx = '') {
+    this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
+    this.googleCx = googleCx || process.env.GOOGLE_CX || '';
+  }
+
+  async search(query, maxPrice) {
+    // Validate Google API credentials
+    if (!this.googleApiKey || !this.googleCx) {
+      console.warn('Used Cars: Google API credentials not configured. Please add API key and CX in settings.');
+      return [];
+    }
+
+    // Check rate limits before making API call
+    const limitCheck = await googleRateLimiter.checkLimit();
+    
+    // Log warnings if approaching limit
+    if (limitCheck.warning) {
+      if (limitCheck.level === 'critical') {
+        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+      } else if (limitCheck.level === 'warning') {
+        console.warn(`⚠️ ${limitCheck.warning}`);
+      }
+    }
+    
+    // If limit exceeded, return empty results with error
+    if (!limitCheck.canProceed) {
+      console.error(`❌ ${limitCheck.warning}`);
+      return [];
+    }
+
+    // Generate cache key
+    const cacheKey = `usedcars:${query}:${maxPrice || 'no-max'}`;
+    
+    // Check cache first
+    const cached = searchCache.get(cacheKey);
+    if (cached) {
+      console.log('Used Cars: Returning cached results');
+      return cached;
+    }
+
+    try {
+      // Search both mobile.de and AutoScout24
+      const [mobileResults, autoScoutResults] = await Promise.allSettled([
+        this.searchPlatform(query, maxPrice, PLATFORMS.MOBILE_DE, API_CONFIG.USED_CARS.MOBILE_DE_URL),
+        this.searchPlatform(query, maxPrice, PLATFORMS.AUTOSCOUT24, API_CONFIG.USED_CARS.AUTOSCOUT24_URL),
+      ]);
+
+      const results = [];
+      
+      // Add mobile.de results
+      if (mobileResults.status === 'fulfilled') {
+        results.push(...mobileResults.value);
+      } else {
+        console.error('mobile.de search error:', redactSensitiveData(mobileResults.reason?.message || String(mobileResults.reason)));
+      }
+      
+      // Add AutoScout24 results
+      if (autoScoutResults.status === 'fulfilled') {
+        results.push(...autoScoutResults.value);
+      } else {
+        console.error('AutoScout24 search error:', redactSensitiveData(autoScoutResults.reason?.message || String(autoScoutResults.reason)));
+      }
+
+      // Cache the results
+      searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+      
+      return results;
+    } catch (error) {
+      console.error('Used Cars search error:', redactSensitiveData(error.message || ''));
+      return [];
+    }
+  }
+
+  /**
+   * Search a specific used car platform using Google Custom Search
+   * @param {string} query - Search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @param {string} platformName - Platform name for result metadata
+   * @param {string} siteUrl - Site URL for site: operator
+   * @returns {Promise<Array>} Array of search results
+   */
+  async searchPlatform(query, maxPrice, platformName, siteUrl) {
+    // Validate query
+    if (!query || query.trim() === '') {
+      console.log(`${platformName}: Empty query, skipping API call`);
+      return [];
+    }
+
+    try {
+      // Build Google Custom Search API request
+      // Search specifically on the target site using site: operator
+      const searchQuery = `site:${siteUrl} ${query}`;
+      const params = {
+        key: this.googleApiKey,
+        cx: this.googleCx,
+        q: searchQuery,
+        num: API_CONFIG.USED_CARS.RESULTS_PER_PAGE,
+      };
+
+      // Build query string
+      const queryString = new URLSearchParams(params).toString();
+      const url = `${API_CONFIG.GOOGLE_CUSTOM_SEARCH.BASE_URL}?${queryString}`;
+
+      console.log(`${platformName}: Searching for "${query}"`);
+
+      // Make API request with timeout
+      const response = await axios.get(url, {
+        timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+      });
+      
+      // Increment rate limit counter after successful HTTP request
+      await googleRateLimiter.incrementCount();
+      
+      // Parse response
+      return this.parseGoogleResponse(response.data, query, maxPrice, platformName);
+    } catch (error) {
+      console.error(`${platformName} search error:`, redactSensitiveData(error.message || ''));
+      throw error;
+    }
+  }
+
+  /**
+   * Parse Google Custom Search API response
+   * @param {Object} data - Google API response data
+   * @param {string} query - Original search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @param {string} platformName - Platform name for result metadata
+   * @returns {Array} Array of standardized search results
+   */
+  parseGoogleResponse(data, query, maxPrice, platformName) {
+    try {
+      if (!data.items || data.items.length === 0) {
+        console.log(`${platformName}: No items found in response`);
+        return [];
+      }
+
+      console.log(`${platformName}: Found ${data.items.length} items for query "${query}"`);
+
+      // Generate timestamp once for all items in this batch
+      const batchTimestamp = Date.now();
+
+      // Transform Google results to our format
+      const results = data.items
+        .map(item => {
+          const title = item.title || 'No title';
+          const snippet = item.snippet || '';
+          
+          // Try to extract price from snippet or title
+          // Look for patterns like "EUR 99,99" or "9.999 €" or "€ 9.999,-"
+          // Used car prices can be higher, so we match longer numbers
+          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*([\d.,]+)|(\d[\d.,]*)\s*(?:EUR|€)/i);
+          let price = 0;
+          if (priceMatch) {
+            const priceStr = (priceMatch[1] || priceMatch[2])
+              .replace(/\./g, '') // Remove thousand separators (German format: 9.999)
+              .replace(',', '.') // Replace decimal comma with dot
+              .replace(/-/g, ''); // Remove trailing dash
+            price = parseFloat(priceStr);
+          }
+
+          // Extract year if present (e.g., "2018" or "Bj. 2018")
+          const yearMatch = snippet.match(/(?:Bj\.|Jahr|Year|EZ)\s*(\d{4})|(\d{4})/i);
+          const year = yearMatch ? (yearMatch[1] || yearMatch[2]) : '';
+
+          // Extract mileage if present (e.g., "50.000 km" or "50000km")
+          const mileageMatch = snippet.match(/([\d.]+)\s*km/i);
+          const mileage = mileageMatch ? mileageMatch[1].replace(/\./g, '') : '';
+
+          return {
+            id: `${platformName}-${batchTimestamp}-${Math.random().toString(36).slice(2, 11)}`,
+            title: title,
+            price: price,
+            currency: 'EUR',
+            platform: platformName,
+            url: item.link || '',
+            year: year,
+            mileage: mileage,
+            timestamp: new Date(batchTimestamp).toISOString(),
+            snippet: snippet,
+          };
+        })
+        // Filter by max price if specified (only if price was extracted)
+        .filter(item => {
+          if (!maxPrice) {
+            return true;
+          }
+          if (item.price === 0) {
+            return true; // Include items where price couldn't be extracted
+          }
+          return item.price <= maxPrice;
+        });
+
+      return results;
+    } catch (error) {
+      console.error(`Error parsing ${platformName} API response:`, redactSensitiveData(error.message || String(error)));
+      return [];
+    }
   }
 }

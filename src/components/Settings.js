@@ -22,6 +22,7 @@ export default function Settings({ onClose, onSettingsChange }) {
   const [ebayEnabled, setEbayEnabled] = useState(true);
   const [kleinanzeigenEnabled, setKleinanzeigenEnabled] = useState(true);
   const [useGoogleForEbay, setUseGoogleForEbay] = useState(false);
+  const [usedCarsEnabled, setUsedCarsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   // Rate limit states
@@ -75,6 +76,7 @@ export default function Settings({ onClose, onSettingsChange }) {
       setEbayEnabled(settings.ebayEnabled !== undefined ? settings.ebayEnabled : true);
       setKleinanzeigenEnabled(settings.kleinanzeigenEnabled !== undefined ? settings.kleinanzeigenEnabled : true);
       setUseGoogleForEbay(settings.useGoogleForEbay === true);
+      setUsedCarsEnabled(settings.usedCarsEnabled === true);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -92,6 +94,7 @@ export default function Settings({ onClose, onSettingsChange }) {
         ebayEnabled,
         kleinanzeigenEnabled,
         useGoogleForEbay,
+        usedCarsEnabled,
       };
       
       const success = await SettingsService.saveSettings(settings);
@@ -129,6 +132,19 @@ export default function Settings({ onClose, onSettingsChange }) {
       return;
     }
     setKleinanzeigenEnabled(value);
+  };
+
+  const handleUsedCarsToggle = (value) => {
+    // Check if Google credentials are available when enabling
+    if (value && (!googleApiKey || !googleCx)) {
+      Alert.alert(
+        'Google API Required',
+        'Used car search requires Google Custom Search API credentials. Please enter your Google API Key and Search Engine ID first.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    setUsedCarsEnabled(value);
   };
 
   if (isLoading) {
@@ -284,6 +300,21 @@ export default function Settings({ onClose, onSettingsChange }) {
               trackColor={{ false: '#767577', true: '#81b0ff' }}
               thumbColor={kleinanzeigenEnabled ? '#2196F3' : '#f4f3f4'}
               accessibilityLabel="Toggle Kleinanzeigen"
+            />
+          </View>
+
+          <View style={styles.switchContainer}>
+            <View style={styles.switchLabel}>
+              <Text style={styles.label}>Used Cars (mobile.de, AutoScout24)</Text>
+              <Text style={styles.helperText}>Search used car platforms via Google (requires Google API)</Text>
+            </View>
+            <Switch
+              value={usedCarsEnabled}
+              onValueChange={handleUsedCarsToggle}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={usedCarsEnabled ? '#2196F3' : '#f4f3f4'}
+              accessibilityLabel="Toggle Used Cars"
+              disabled={!googleApiKey || !googleCx}
             />
           </View>
 

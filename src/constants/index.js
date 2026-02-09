@@ -13,6 +13,8 @@ export const PLATFORMS = {
   EBAY: 'eBay',
   KLEINANZEIGEN: 'Kleinanzeigen',
   GOOGLE_EBAY: 'eBay (Google)',
+  MOBILE_DE: 'mobile.de',
+  AUTOSCOUT24: 'AutoScout24',
 };
 
 /**
@@ -62,6 +64,12 @@ export const API_CONFIG = {
     DAILY_RATE_LIMIT: 100, // Free tier: 100 queries per day
     WARNING_THRESHOLD: 0.8, // Warn at 80% usage (80 queries)
     CRITICAL_THRESHOLD: 0.95, // Critical warning at 95% usage (95 queries)
+  },
+  USED_CARS: {
+    // Used car platforms use Google Custom Search
+    MOBILE_DE_URL: 'https://www.mobile.de',
+    AUTOSCOUT24_URL: 'https://www.autoscout24.de',
+    RESULTS_PER_PAGE: 10,
   },
 };
 
@@ -127,6 +135,8 @@ export const FILTER_OPTIONS = {
     ALL: 'all',
     EBAY: PLATFORMS.EBAY,
     KLEINANZEIGEN: PLATFORMS.KLEINANZEIGEN,
+    MOBILE_DE: PLATFORMS.MOBILE_DE,
+    AUTOSCOUT24: PLATFORMS.AUTOSCOUT24,
   },
   READ_STATUS: {
     ALL: 'all',
@@ -147,6 +157,7 @@ export const DEFAULT_SETTINGS = {
   ebayEnabled: true,
   kleinanzeigenEnabled: true,
   useGoogleForEbay: false, // Use Google Custom Search as eBay fallback
+  usedCarsEnabled: false, // Enable used car search (requires Google Custom Search)
 };
 
 /**
@@ -194,6 +205,7 @@ export const FEATURE_FLAGS = {
   ENABLE_PERFORMANCE_LOGGING: false, // Enable in development for debugging
   ENABLE_KLEINANZEIGEN: true, // Currently returns mock data
   ENABLE_EBAY: true,
+  ENABLE_USED_CARS: true, // Enable used car search module
 };
 
 /**
