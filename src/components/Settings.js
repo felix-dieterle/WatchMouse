@@ -17,12 +17,16 @@ import RateLimitIndicator from './RateLimitIndicator';
 export default function Settings({ onClose, onSettingsChange }) {
   const [apiKey, setApiKey] = useState('');
   const [ebayApiKey, setEbayApiKey] = useState('');
+  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [googleCx, setGoogleCx] = useState('');
   const [ebayEnabled, setEbayEnabled] = useState(true);
   const [kleinanzeigenEnabled, setKleinanzeigenEnabled] = useState(true);
+  const [useGoogleForEbay, setUseGoogleForEbay] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   // Rate limit states
   const [ebayRateLimit, setEbayRateLimit] = useState({ count: 0, limit: 5000, usagePercent: 0 });
+  const [googleRateLimit, setGoogleRateLimit] = useState({ count: 0, limit: 100, usagePercent: 0 });
   const [openRouterRateLimit, setOpenRouterRateLimit] = useState({ count: 0, limit: null, usagePercent: 0 });
 
   useEffect(() => {
@@ -39,6 +43,14 @@ export default function Settings({ onClose, onSettingsChange }) {
         count: ebayStats.count,
         limit: ebayStats.limit,
         usagePercent: ebayStats.usagePercent,
+      });
+
+      // Load Google rate limit stats
+      const googleStats = await searchService.getGoogleRateLimitStats();
+      setGoogleRateLimit({
+        count: googleStats.count,
+        limit: googleStats.limit,
+        usagePercent: googleStats.usagePercent,
       });
 
       // Load OpenRouter rate limit stats
@@ -58,8 +70,11 @@ export default function Settings({ onClose, onSettingsChange }) {
       const settings = await SettingsService.loadSettings();
       setApiKey(settings.openrouterApiKey || '');
       setEbayApiKey(settings.ebayApiKey || '');
+      setGoogleApiKey(settings.googleApiKey || '');
+      setGoogleCx(settings.googleCx || '');
       setEbayEnabled(settings.ebayEnabled !== undefined ? settings.ebayEnabled : true);
       setKleinanzeigenEnabled(settings.kleinanzeigenEnabled !== undefined ? settings.kleinanzeigenEnabled : true);
+      setUseGoogleForEbay(settings.useGoogleForEbay === true);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -72,8 +87,11 @@ export default function Settings({ onClose, onSettingsChange }) {
       const settings = {
         openrouterApiKey: apiKey.trim(),
         ebayApiKey: ebayApiKey.trim(),
+        googleApiKey: googleApiKey.trim(),
+        googleCx: googleCx.trim(),
         ebayEnabled,
         kleinanzeigenEnabled,
+        useGoogleForEbay,
       };
       
       const success = await SettingsService.saveSettings(settings);
@@ -180,6 +198,63 @@ export default function Settings({ onClose, onSettingsChange }) {
           </Text>
         </View>
 
+        {/* Google Custom Search API Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Google Custom Search (eBay Fallback)</Text>
+          <Text style={styles.helperText} style={{ marginBottom: 12 }}>
+            Use Google Custom Search API when eBay API key is not available. Requires both API Key and Search Engine ID.
+          </Text>
+          
+          <Text style={styles.label}>Google API Key</Text>
+          <TextInput
+            style={styles.input}
+            value={googleApiKey}
+            onChangeText={setGoogleApiKey}
+            placeholder="Enter your Google API key"
+            placeholderTextColor="#999"
+            secureTextEntry={true}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.helperText}>
+            Get your API key at: https://console.cloud.google.com/
+          </Text>
+          
+          <Text style={styles.label} style={{ marginTop: 12 }}>Custom Search Engine ID (CX)</Text>
+          <TextInput
+            style={styles.input}
+            value={googleCx}
+            onChangeText={setGoogleCx}
+            placeholder="Enter your Custom Search Engine ID"
+            placeholderTextColor="#999"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.helperText}>
+            Create a search engine at: https://programmablesearchengine.google.com/
+          </Text>
+          
+          <View style={styles.switchContainer} style={{ marginTop: 12 }}>
+            <View style={styles.switchLabel}>
+              <Text style={styles.label}>Use Google as eBay Fallback</Text>
+              <Text style={styles.helperText}>Enable Google search when eBay API key is missing</Text>
+            </View>
+            <Switch
+              value={useGoogleForEbay}
+              onValueChange={setUseGoogleForEbay}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={useGoogleForEbay ? '#2196F3' : '#f4f3f4'}
+              accessibilityLabel="Toggle Google fallback"
+            />
+          </View>
+          
+          <Text style={styles.helperText}>
+            {(googleApiKey.trim() && googleCx.trim()) 
+              ? '✓ Google API configured - Can be used as fallback' 
+              : '⚠ Google API not fully configured'}
+          </Text>
+        </View>
+
         {/* Platform Modules Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Platform Modules</Text>
@@ -232,6 +307,14 @@ export default function Settings({ onClose, onSettingsChange }) {
             count={ebayRateLimit.count}
             limit={ebayRateLimit.limit}
             enabled={ebayEnabled && ebayApiKey.trim() !== ''}
+          />
+          
+          <RateLimitIndicator
+            apiName="Google Custom Search"
+            usagePercent={googleRateLimit.usagePercent}
+            count={googleRateLimit.count}
+            limit={googleRateLimit.limit}
+            enabled={useGoogleForEbay && googleApiKey.trim() !== '' && googleCx.trim() !== ''}
           />
           
           <RateLimitIndicator

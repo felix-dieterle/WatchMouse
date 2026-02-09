@@ -2,7 +2,7 @@ import axios from 'axios';
 import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS, CACHE_CONFIG } from '../constants';
 import { redactSensitiveData } from '../utils/security';
 import { Cache } from '../utils/performance';
-import { EbayRateLimiter } from '../utils/rateLimiter';
+import { EbayRateLimiter, GoogleRateLimiter } from '../utils/rateLimiter';
 import { 
   QueryOptimizer, 
   AIModeOptimizer, 
@@ -12,8 +12,9 @@ import {
 // Initialize cache for search results
 const searchCache = new Cache(CACHE_CONFIG.MAX_CACHE_SIZE);
 
-// Initialize eBay rate limiter
+// Initialize rate limiters
 const ebayRateLimiter = new EbayRateLimiter();
+const googleRateLimiter = new GoogleRateLimiter();
 
 /**
  * Service for searching across multiple shopping platforms
@@ -25,6 +26,7 @@ export class SearchService {
     this.platformSettings = {
       ebayEnabled: platformSettings.ebayEnabled !== undefined ? platformSettings.ebayEnabled : true,
       kleinanzeigenEnabled: platformSettings.kleinanzeigenEnabled !== undefined ? platformSettings.kleinanzeigenEnabled : true,
+      useGoogleForEbay: platformSettings.useGoogleForEbay === true,
     };
     
     // AI mode affects search optimization strategy
@@ -32,7 +34,13 @@ export class SearchService {
     this.aiModeEnabled = platformSettings.aiModeEnabled === true;
     
     this.platforms = {
-      ebay: new EbaySearcher(this.aiModeEnabled, platformSettings.ebayApiKey),
+      ebay: new EbaySearcher(
+        this.aiModeEnabled, 
+        platformSettings.ebayApiKey,
+        platformSettings.googleApiKey,
+        platformSettings.googleCx,
+        this.platformSettings.useGoogleForEbay
+      ),
       kleinanzeigen: new KleinanzeigenSearcher(),
     };
   }
@@ -60,6 +68,14 @@ export class SearchService {
    */
   async getEbayRateLimitStats() {
     return await ebayRateLimiter.getStats();
+  }
+
+  /**
+   * Get Google API rate limit statistics
+   * @returns {Promise<Object>} Rate limit stats
+   */
+  async getGoogleRateLimitStats() {
+    return await googleRateLimiter.getStats();
   }
 
   /**
@@ -110,13 +126,18 @@ export class SearchService {
  * Searches eBay using the Finding API with caching support
  */
 class EbaySearcher {
-  constructor(aiModeEnabled = false, apiKey = '') {
+  constructor(aiModeEnabled = false, apiKey = '', googleApiKey = '', googleCx = '', useGoogleForEbay = false) {
     // Using eBay Finding API (requires API key for production)
     // Prioritize passed apiKey, fallback to environment variable
     this.apiKey = apiKey || process.env.EBAY_API_KEY || '';
     this.baseUrl = API_CONFIG.EBAY.BASE_URL;
     this.globalId = API_CONFIG.EBAY.GLOBAL_ID;
     this.aiModeEnabled = aiModeEnabled;
+    
+    // Google Custom Search credentials for fallback
+    this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
+    this.googleCx = googleCx || process.env.GOOGLE_CX || '';
+    this.useGoogleForEbay = useGoogleForEbay;
   }
 
   /**
@@ -151,9 +172,22 @@ class EbaySearcher {
       return cached;
     }
     
-    // If no API key is configured, return empty results
+    // If no eBay API key is configured, try Google Custom Search fallback
     if (!this.apiKey) {
+      if (this.useGoogleForEbay && this.googleApiKey && this.googleCx) {
+        console.log('eBay: No eBay API key. Using Google Custom Search as fallback...');
+        try {
+          const results = await this.searchWithGoogle(query, maxPrice);
+          searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+          return results;
+        } catch (error) {
+          console.error('Google Custom Search error:', redactSensitiveData(error.message || ''));
+          return [];
+        }
+      }
+      
       console.warn('eBay: No API key configured. Please add EBAY_API_KEY to enable eBay search.');
+      console.warn('eBay: Or enable Google Custom Search fallback in settings.');
       console.warn('eBay: Get your API key at https://developer.ebay.com/');
       return [];
     }
@@ -287,6 +321,135 @@ class EbaySearcher {
       });
     } catch (error) {
       console.error('Error parsing eBay API response:', redactSensitiveData(error.message || String(error)));
+      return [];
+    }
+  }
+
+  /**
+   * Search using Google Custom Search API
+   * @param {string} query - Search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Promise<Array>} Array of search results
+   */
+  async searchWithGoogle(query, maxPrice) {
+    // Validate query
+    if (!query || query.trim() === '') {
+      console.log('Google: Empty query, skipping API call');
+      return [];
+    }
+
+    // Check rate limits before making API call
+    const limitCheck = await googleRateLimiter.checkLimit();
+    
+    // Log warnings if approaching limit
+    if (limitCheck.warning) {
+      if (limitCheck.level === 'critical') {
+        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+      } else if (limitCheck.level === 'warning') {
+        console.warn(`⚠️ ${limitCheck.warning}`);
+      }
+    }
+    
+    // If limit exceeded, return empty results with error
+    if (!limitCheck.canProceed) {
+      console.error(`❌ ${limitCheck.warning}`);
+      return [];
+    }
+
+    try {
+      // Build Google Custom Search API request
+      // Search specifically on eBay.de using site: operator
+      const searchQuery = `site:ebay.de ${query}`;
+      const params = {
+        key: this.googleApiKey,
+        cx: this.googleCx,
+        q: searchQuery,
+        num: API_CONFIG.GOOGLE_CUSTOM_SEARCH.RESULTS_PER_PAGE,
+      };
+
+      // Build query string
+      const queryString = new URLSearchParams(params).toString();
+      const url = `${API_CONFIG.GOOGLE_CUSTOM_SEARCH.BASE_URL}?${queryString}`;
+
+      console.log(`Google: Searching for "${query}" on eBay.de`);
+
+      // Make API request with timeout
+      const response = await axios.get(url, {
+        timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+      });
+      
+      // Increment rate limit counter after successful HTTP request
+      await googleRateLimiter.incrementCount();
+      
+      // Parse response
+      return this.parseGoogleResponse(response.data, query, maxPrice);
+    } catch (error) {
+      console.error('Google Custom Search error:', redactSensitiveData(error.message || ''));
+      throw error;
+    }
+  }
+
+  /**
+   * Parse Google Custom Search API response
+   * @param {Object} data - Google API response data
+   * @param {string} query - Original search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Array} Array of standardized search results
+   */
+  parseGoogleResponse(data, query, maxPrice) {
+    try {
+      if (!data.items || data.items.length === 0) {
+        console.log('Google: No items found in response');
+        return [];
+      }
+
+      console.log(`Google: Found ${data.items.length} items for query "${query}"`);
+
+      // Generate timestamp once for all items in this batch
+      const batchTimestamp = Date.now();
+
+      // Transform Google results to our format
+      const results = data.items
+        .map(item => {
+          // Extract eBay item ID from URL
+          const urlMatch = item.link?.match(/\/itm\/(\d+)/);
+          const itemId = urlMatch ? urlMatch[1] : '';
+          
+          const title = item.title || 'No title';
+          const snippet = item.snippet || '';
+          
+          // Try to extract price from snippet or title
+          // Look for patterns like "EUR 99,99" or "99,99 €" or "$99.99"
+          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*(\d+[.,]\d{2})|(\d+[.,]\d{2})\s*(?:EUR|€)/);
+          let price = 0;
+          if (priceMatch) {
+            const priceStr = (priceMatch[1] || priceMatch[2]).replace(',', '.');
+            price = parseFloat(priceStr);
+          }
+
+          return {
+            id: `${PLATFORMS.GOOGLE_EBAY}-${itemId || batchTimestamp}-${Math.random().toString(36).slice(2, 11)}`,
+            title: title,
+            price: price,
+            currency: 'EUR',
+            platform: PLATFORMS.GOOGLE_EBAY,
+            url: item.link || '',
+            condition: '',
+            location: '',
+            timestamp: new Date(batchTimestamp).toISOString(),
+            snippet: snippet,
+          };
+        })
+        // Filter by max price if specified (only if price was extracted)
+        .filter(item => {
+          if (!maxPrice) return true;
+          if (item.price === 0) return true; // Include items where price couldn't be extracted
+          return item.price <= maxPrice;
+        });
+
+      return results;
+    } catch (error) {
+      console.error('Error parsing Google API response:', redactSensitiveData(error.message || String(error)));
       return [];
     }
   }

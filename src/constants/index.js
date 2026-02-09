@@ -12,6 +12,7 @@
 export const PLATFORMS = {
   EBAY: 'eBay',
   KLEINANZEIGEN: 'Kleinanzeigen',
+  GOOGLE_EBAY: 'eBay (Google)',
 };
 
 /**
@@ -24,8 +25,11 @@ export const STORAGE_KEYS = {
   SETTINGS: 'app_settings',
   SECURE_OPENROUTER_KEY: 'secure_openrouter_api_key',
   SECURE_EBAY_KEY: 'secure_ebay_api_key',
+  SECURE_GOOGLE_API_KEY: 'secure_google_api_key',
+  SECURE_GOOGLE_CX: 'secure_google_cx',
   EBAY_RATE_LIMIT: 'ebay_rate_limit_tracker',
   OPENROUTER_RATE_LIMIT: 'openrouter_rate_limit_tracker',
+  GOOGLE_RATE_LIMIT: 'google_rate_limit_tracker',
 };
 
 /**
@@ -51,6 +55,13 @@ export const API_CONFIG = {
   },
   KLEINANZEIGEN: {
     BASE_URL: 'https://www.kleinanzeigen.de/s-',
+  },
+  GOOGLE_CUSTOM_SEARCH: {
+    BASE_URL: 'https://www.googleapis.com/customsearch/v1',
+    RESULTS_PER_PAGE: 10, // Max 10 per request for free tier
+    DAILY_RATE_LIMIT: 100, // Free tier: 100 queries per day
+    WARNING_THRESHOLD: 0.8, // Warn at 80% usage (80 queries)
+    CRITICAL_THRESHOLD: 0.95, // Critical warning at 95% usage (95 queries)
   },
 };
 
@@ -131,8 +142,11 @@ export const FILTER_OPTIONS = {
 export const DEFAULT_SETTINGS = {
   openrouterApiKey: '',
   ebayApiKey: '',
+  googleApiKey: '',
+  googleCx: '',
   ebayEnabled: true,
   kleinanzeigenEnabled: true,
+  useGoogleForEbay: false, // Use Google Custom Search as eBay fallback
 };
 
 /**

@@ -39,6 +39,9 @@ export class BatchSearchService {
       kleinanzeigenEnabled: this.settings.kleinanzeigenEnabled,
       aiModeEnabled: this.settings.openrouterApiKey ? true : false,
       ebayApiKey: this.settings.ebayApiKey,
+      googleApiKey: this.settings.googleApiKey,
+      googleCx: this.settings.googleCx,
+      useGoogleForEbay: this.settings.useGoogleForEbay,
     });
 
     this.aiService = new AIService(this.settings.openrouterApiKey);
