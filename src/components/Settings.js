@@ -201,7 +201,7 @@ export default function Settings({ onClose, onSettingsChange }) {
         {/* Google Custom Search API Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Google Custom Search (eBay Fallback)</Text>
-          <Text style={styles.helperText} style={{ marginBottom: 12 }}>
+          <Text style={[styles.helperText, { marginBottom: 12 }]}>
             Use Google Custom Search API when eBay API key is not available. Requires both API Key and Search Engine ID.
           </Text>
           
@@ -220,7 +220,7 @@ export default function Settings({ onClose, onSettingsChange }) {
             Get your API key at: https://console.cloud.google.com/
           </Text>
           
-          <Text style={styles.label} style={{ marginTop: 12 }}>Custom Search Engine ID (CX)</Text>
+          <Text style={[styles.label, { marginTop: 12 }]}>Custom Search Engine ID (CX)</Text>
           <TextInput
             style={styles.input}
             value={googleCx}
@@ -234,7 +234,7 @@ export default function Settings({ onClose, onSettingsChange }) {
             Create a search engine at: https://programmablesearchengine.google.com/
           </Text>
           
-          <View style={styles.switchContainer} style={{ marginTop: 12 }}>
+          <View style={[styles.switchContainer, { marginTop: 12 }]}>
             <View style={styles.switchLabel}>
               <Text style={styles.label}>Use Google as eBay Fallback</Text>
               <Text style={styles.helperText}>Enable Google search when eBay API key is missing</Text>
