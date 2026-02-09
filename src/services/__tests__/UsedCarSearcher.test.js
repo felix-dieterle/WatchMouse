@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_CONFIG, PLATFORMS, PERFORMANCE_CONFIG } from '../../constants';
+import { PLATFORMS } from '../../constants';
 
 // Mock axios
 jest.mock('axios');
