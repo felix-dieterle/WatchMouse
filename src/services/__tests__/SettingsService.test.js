@@ -37,6 +37,7 @@ describe('SettingsService', () => {
         googleApiKey: '',
         googleCx: '',
         useGoogleForEbay: false,
+        usedCarsEnabled: false,
       });
     });
 
@@ -54,6 +55,7 @@ describe('SettingsService', () => {
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
         useGoogleForEbay: false,
+        usedCarsEnabled: false,
       });
     });
 
@@ -71,6 +73,7 @@ describe('SettingsService', () => {
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
         useGoogleForEbay: false,
+        usedCarsEnabled: false,
       });
     });
 

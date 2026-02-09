@@ -667,13 +667,17 @@ class UsedCarSearcher {
           // Try to extract price from snippet or title
           // Look for patterns like "EUR 99,99" or "9.999 €" or "€ 9.999,-"
           // Used car prices can be higher, so we match longer numbers
-          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*([\d.,]+)|(\d[\d.,]*)\s*(?:EUR|€)/i);
+          // Match currency symbol followed by number, or number followed by currency
+          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*([\d.,]+)/i) || 
+                           snippet.match(/([\d.,]+)\s*(?:EUR|€)/i);
           let price = 0;
           if (priceMatch) {
-            const priceStr = (priceMatch[1] || priceMatch[2])
+            let priceStr = priceMatch[1];
+            // Clean up the price string
+            priceStr = priceStr
+              .replace(/,-?$/, '') // Remove trailing comma-dash or comma
               .replace(/\./g, '') // Remove thousand separators (German format: 9.999)
-              .replace(',', '.') // Replace decimal comma with dot
-              .replace(/-/g, ''); // Remove trailing dash
+              .replace(',', '.'); // Replace decimal comma with dot
             price = parseFloat(priceStr);
           }
 
