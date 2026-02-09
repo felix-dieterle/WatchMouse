@@ -21,7 +21,9 @@ describe('SettingsService', () => {
       AsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockNonSensitiveSettings));
       SecureStore.getItemAsync
         .mockResolvedValueOnce(mockOpenRouterApiKey)
-        .mockResolvedValueOnce(mockEbayApiKey);
+        .mockResolvedValueOnce(mockEbayApiKey)
+        .mockResolvedValueOnce(null) // googleApiKey
+        .mockResolvedValueOnce(null); // googleCx
       
       const settings = await SettingsService.loadSettings();
       
@@ -32,6 +34,9 @@ describe('SettingsService', () => {
         ...mockNonSensitiveSettings,
         openrouterApiKey: mockOpenRouterApiKey,
         ebayApiKey: mockEbayApiKey,
+        googleApiKey: '',
+        googleCx: '',
+        useGoogleForEbay: false,
       });
     });
 
@@ -44,8 +49,11 @@ describe('SettingsService', () => {
       expect(settings).toEqual({
         openrouterApiKey: '',
         ebayApiKey: '',
+        googleApiKey: '',
+        googleCx: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
+        useGoogleForEbay: false,
       });
     });
 
@@ -58,8 +66,11 @@ describe('SettingsService', () => {
       expect(settings).toEqual({
         openrouterApiKey: '',
         ebayApiKey: '',
+        googleApiKey: '',
+        googleCx: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
+        useGoogleForEbay: false,
       });
     });
 
@@ -74,8 +85,11 @@ describe('SettingsService', () => {
       
       expect(settings.openrouterApiKey).toBe('');
       expect(settings.ebayApiKey).toBe('');
+      expect(settings.googleApiKey).toBe('');
+      expect(settings.googleCx).toBe('');
       expect(settings.ebayEnabled).toBe(true);
       expect(settings.kleinanzeigenEnabled).toBe(true);
+      expect(settings.useGoogleForEbay).toBe(false);
     });
   });
 
@@ -84,8 +98,11 @@ describe('SettingsService', () => {
       const settings = {
         openrouterApiKey: 'new-openrouter-key',
         ebayApiKey: 'new-ebay-key',
+        googleApiKey: 'new-google-key',
+        googleCx: 'new-google-cx',
         ebayEnabled: false,
         kleinanzeigenEnabled: true,
+        useGoogleForEbay: true,
       };
       
       AsyncStorage.setItem.mockResolvedValue();
@@ -98,6 +115,7 @@ describe('SettingsService', () => {
         JSON.stringify({
           ebayEnabled: false,
           kleinanzeigenEnabled: true,
+          useGoogleForEbay: true,
         })
       );
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
@@ -108,6 +126,14 @@ describe('SettingsService', () => {
         'secure_ebay_api_key',
         'new-ebay-key'
       );
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+        'secure_google_api_key',
+        'new-google-key'
+      );
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+        'secure_google_cx',
+        'new-google-cx'
+      );
       expect(result).toBe(true);
     });
 
@@ -115,8 +141,11 @@ describe('SettingsService', () => {
       const settings = {
         openrouterApiKey: '',
         ebayApiKey: '',
+        googleApiKey: '',
+        googleCx: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: false,
+        useGoogleForEbay: false,
       };
       
       AsyncStorage.setItem.mockResolvedValue();
@@ -126,6 +155,8 @@ describe('SettingsService', () => {
       
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_openrouter_api_key');
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_ebay_api_key');
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_google_api_key');
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_google_cx');
       expect(result).toBe(true);
     });
 
@@ -134,7 +165,9 @@ describe('SettingsService', () => {
       
       const result = await SettingsService.saveSettings({ 
         openrouterApiKey: 'key',
-        ebayApiKey: 'ebay-key'
+        ebayApiKey: 'ebay-key',
+        googleApiKey: 'google-key',
+        googleCx: 'google-cx',
       });
       
       expect(result).toBe(false);
