@@ -8,14 +8,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS, API_CONFIG } from '../constants';
 
 /**
- * eBay API Rate Limiter
- * Tracks daily API calls and warns when approaching limits
+ * Base Rate Limiter class
+ * Common functionality for all rate limiters
  */
-export class EbayRateLimiter {
-  constructor() {
-    this.dailyLimit = API_CONFIG.EBAY.DAILY_RATE_LIMIT;
-    this.warningThreshold = API_CONFIG.EBAY.WARNING_THRESHOLD;
-    this.criticalThreshold = API_CONFIG.EBAY.CRITICAL_THRESHOLD;
+class BaseRateLimiter {
+  constructor(storageKey, dailyLimit, warningThreshold, criticalThreshold, apiName) {
+    this.storageKey = storageKey;
+    this.dailyLimit = dailyLimit;
+    this.warningThreshold = warningThreshold;
+    this.criticalThreshold = criticalThreshold;
+    this.apiName = apiName;
     this.data = null;
   }
 
@@ -25,7 +27,7 @@ export class EbayRateLimiter {
    */
   async load() {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.EBAY_RATE_LIMIT);
+      const stored = await AsyncStorage.getItem(this.storageKey);
       if (stored) {
         this.data = JSON.parse(stored);
         
@@ -41,7 +43,7 @@ export class EbayRateLimiter {
       }
       return this.data;
     } catch (error) {
-      console.error('Error loading rate limit data:', error);
+      console.error(`Error loading ${this.apiName} rate limit data:`, error);
       this.data = this._createNewData();
       return this.data;
     }
@@ -66,11 +68,11 @@ export class EbayRateLimiter {
   async save() {
     try {
       await AsyncStorage.setItem(
-        STORAGE_KEYS.EBAY_RATE_LIMIT,
+        this.storageKey,
         JSON.stringify(this.data)
       );
     } catch (error) {
-      console.error('Error saving rate limit data:', error);
+      console.error(`Error saving ${this.apiName} rate limit data:`, error);
     }
   }
 
@@ -87,7 +89,7 @@ export class EbayRateLimiter {
     if (this.dailyLimit <= 0) {
       return {
         canProceed: false,
-        warning: 'Invalid rate limit configuration (limit must be > 0)',
+        warning: `Invalid ${this.apiName} rate limit configuration (limit must be > 0)`,
         level: 'error',
         remaining: 0,
         usagePercent: 1.0,
@@ -101,7 +103,7 @@ export class EbayRateLimiter {
     if (this.data.count >= this.dailyLimit) {
       return {
         canProceed: false,
-        warning: `eBay API daily limit reached (${this.dailyLimit} calls). Limit resets at midnight.`,
+        warning: `${this.apiName} API daily limit reached (${this.dailyLimit} calls). Limit resets at midnight.`,
         level: 'error',
         remaining: 0,
         usagePercent: 1.0,
@@ -112,7 +114,7 @@ export class EbayRateLimiter {
     if (usagePercent >= this.criticalThreshold) {
       return {
         canProceed: true,
-        warning: `eBay API limit almost reached! Only ${remaining} calls remaining today.`,
+        warning: `${this.apiName} API limit almost reached! Only ${remaining} calls remaining today.`,
         level: 'critical',
         remaining,
         usagePercent,
@@ -123,7 +125,7 @@ export class EbayRateLimiter {
     if (usagePercent >= this.warningThreshold) {
       return {
         canProceed: true,
-        warning: `eBay API usage at ${Math.round(usagePercent * 100)}%. ${remaining} calls remaining today.`,
+        warning: `${this.apiName} API usage at ${Math.round(usagePercent * 100)}%. ${remaining} calls remaining today.`,
         level: 'warning',
         remaining,
         usagePercent,
@@ -183,5 +185,37 @@ export class EbayRateLimiter {
   async reset() {
     this.data = this._createNewData();
     await this.save();
+  }
+}
+
+/**
+ * eBay API Rate Limiter
+ * Tracks daily API calls and warns when approaching limits
+ */
+export class EbayRateLimiter extends BaseRateLimiter {
+  constructor() {
+    super(
+      STORAGE_KEYS.EBAY_RATE_LIMIT,
+      API_CONFIG.EBAY.DAILY_RATE_LIMIT,
+      API_CONFIG.EBAY.WARNING_THRESHOLD,
+      API_CONFIG.EBAY.CRITICAL_THRESHOLD,
+      'eBay'
+    );
+  }
+}
+
+/**
+ * Google Custom Search API Rate Limiter
+ * Tracks daily API calls and warns when approaching limits
+ */
+export class GoogleRateLimiter extends BaseRateLimiter {
+  constructor() {
+    super(
+      STORAGE_KEYS.GOOGLE_RATE_LIMIT,
+      API_CONFIG.GOOGLE_CUSTOM_SEARCH.DAILY_RATE_LIMIT,
+      API_CONFIG.GOOGLE_CUSTOM_SEARCH.WARNING_THRESHOLD,
+      API_CONFIG.GOOGLE_CUSTOM_SEARCH.CRITICAL_THRESHOLD,
+      'Google'
+    );
   }
 }

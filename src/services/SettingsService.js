@@ -40,6 +40,24 @@ export const SettingsService = {
         settings.ebayApiKey = '';
       }
       
+      // Load Google API key securely from SecureStore
+      try {
+        const secureGoogleKey = await SecureStore.getItemAsync(STORAGE_KEYS.SECURE_GOOGLE_API_KEY);
+        settings.googleApiKey = secureGoogleKey || '';
+      } catch (secureError) {
+        console.error('Error loading Google API key from SecureStore:', secureError);
+        settings.googleApiKey = '';
+      }
+      
+      // Load Google Custom Search Engine ID securely from SecureStore
+      try {
+        const secureGoogleCx = await SecureStore.getItemAsync(STORAGE_KEYS.SECURE_GOOGLE_CX);
+        settings.googleCx = secureGoogleCx || '';
+      } catch (secureError) {
+        console.error('Error loading Google CX from SecureStore:', secureError);
+        settings.googleCx = '';
+      }
+      
       return settings;
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -56,7 +74,13 @@ export const SettingsService = {
   async saveSettings(settings) {
     try {
       // Extract API keys for secure storage
-      const { openrouterApiKey, ebayApiKey, ...nonSensitiveSettings } = settings;
+      const { 
+        openrouterApiKey, 
+        ebayApiKey, 
+        googleApiKey, 
+        googleCx, 
+        ...nonSensitiveSettings 
+      } = settings;
       
       // Save non-sensitive settings to AsyncStorage
       await AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(nonSensitiveSettings));
@@ -84,6 +108,32 @@ export const SettingsService = {
         } catch (deleteError) {
           // Ignore errors when deleting non-existent keys
           console.log('No secure eBay key to delete or deletion failed:', deleteError.message);
+        }
+      }
+      
+      // Save Google API key securely to SecureStore
+      if (googleApiKey) {
+        await SecureStore.setItemAsync(STORAGE_KEYS.SECURE_GOOGLE_API_KEY, googleApiKey);
+      } else {
+        // Delete the key if it's empty
+        try {
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.SECURE_GOOGLE_API_KEY);
+        } catch (deleteError) {
+          // Ignore errors when deleting non-existent keys
+          console.log('No secure Google API key to delete or deletion failed:', deleteError.message);
+        }
+      }
+      
+      // Save Google CX securely to SecureStore
+      if (googleCx) {
+        await SecureStore.setItemAsync(STORAGE_KEYS.SECURE_GOOGLE_CX, googleCx);
+      } else {
+        // Delete the key if it's empty
+        try {
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.SECURE_GOOGLE_CX);
+        } catch (deleteError) {
+          // Ignore errors when deleting non-existent keys
+          console.log('No secure Google CX to delete or deletion failed:', deleteError.message);
         }
       }
       
