@@ -314,6 +314,11 @@ export default function Settings({ onClose, onSettingsChange }) {
               trackColor={{ false: '#767577', true: '#81b0ff' }}
               thumbColor={usedCarsEnabled ? '#2196F3' : '#f4f3f4'}
               accessibilityLabel="Toggle Used Cars"
+              accessibilityHint={
+                !googleApiKey || !googleCx
+                  ? 'Disabled. Google Custom Search API credentials required.'
+                  : 'Toggle used car search on mobile.de and AutoScout24'
+              }
               disabled={!googleApiKey || !googleCx}
             />
           </View>

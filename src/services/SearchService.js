@@ -515,13 +515,31 @@ class KleinanzeigenSearcher {
 /**
  * Used Car platform searcher
  * Searches mobile.de and AutoScout24 using Google Custom Search API
+ * 
+ * This class provides access to German used car platforms via Google's Custom Search API,
+ * searching both mobile.de and AutoScout24 in parallel for better coverage.
+ * 
+ * @example
+ * const searcher = new UsedCarSearcher('google-api-key', 'search-cx-id');
+ * const results = await searcher.search('BMW 320d', 25000);
  */
 class UsedCarSearcher {
+  /**
+   * Create a UsedCarSearcher instance
+   * @param {string} [googleApiKey=''] - Google Custom Search API key
+   * @param {string} [googleCx=''] - Google Custom Search Engine ID
+   */
   constructor(googleApiKey = '', googleCx = '') {
     this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
     this.googleCx = googleCx || process.env.GOOGLE_CX || '';
   }
 
+  /**
+   * Search used car platforms for matching vehicles
+   * @param {string} query - Search query (e.g., "BMW 320d")
+   * @param {number|null} maxPrice - Maximum price filter in EUR (optional)
+   * @returns {Promise<Array>} Array of standardized search results from mobile.de and AutoScout24
+   */
   async search(query, maxPrice) {
     // Validate Google API credentials
     if (!this.googleApiKey || !this.googleCx) {
