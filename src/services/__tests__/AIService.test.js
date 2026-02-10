@@ -11,7 +11,7 @@ describe('AIService', () => {
     it('should initialize with default configuration', () => {
       expect(aiService).toBeDefined();
       expect(aiService.baseUrl).toBe('https://openrouter.ai/api/v1');
-      expect(aiService.model).toBe('openai/gpt-3.5-turbo');
+      expect(aiService.model).toBe('meta-llama/llama-3.2-3b-instruct:free');
     });
 
     it('should accept API key in constructor', () => {

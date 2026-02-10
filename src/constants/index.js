@@ -41,7 +41,7 @@ export const STORAGE_KEYS = {
 export const API_CONFIG = {
   OPENROUTER: {
     BASE_URL: 'https://openrouter.ai/api/v1',
-    MODEL: 'openai/gpt-3.5-turbo',
+    MODEL: 'meta-llama/llama-3.2-3b-instruct:free',
     MAX_TOKENS: 100,
     TEMPERATURE: 0.3,
   },

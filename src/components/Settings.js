@@ -199,13 +199,13 @@ export default function Settings({ onClose, onSettingsChange }) {
               <Text style={styles.infoBold}>Recommended free models:</Text>
             </Text>
             <Text style={styles.infoText}>
-              • meta-llama/llama-3.2-3b-instruct:free (Best free option)
+              • meta-llama/llama-3.2-3b-instruct:free (Current default - FREE!)
             </Text>
             <Text style={styles.infoText}>
               • google/gemini-flash-1.5:free (Fast and free)
             </Text>
             <Text style={styles.infoText}>
-              <Text style={styles.infoBold}>Current default:</Text> openai/gpt-3.5-turbo (~$0.10 per 1,000 searches)
+              <Text style={styles.infoBold}>Paid alternative:</Text> openai/gpt-3.5-turbo (~$0.10 per 1,000 searches)
             </Text>
             <Text style={styles.infoText}>
               See docs/OPENROUTER_MODEL_GUIDE.md for more options and how to change models.

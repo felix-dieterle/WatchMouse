@@ -87,9 +87,9 @@ describe('Settings Visual Tests', () => {
     // Wait for settings to load
     await findByText('OpenRouter API Key');
 
-    // Check for current default model
-    expect(getByText(/openai\/gpt-3.5-turbo/)).toBeTruthy();
-    expect(getByText(/\$0.10 per 1,000 searches/)).toBeTruthy();
+    // Check for current default model (now free!)
+    expect(getByText(/meta-llama\/llama-3.2-3b-instruct:free/)).toBeTruthy();
+    expect(getByText(/Current default - FREE!/)).toBeTruthy();
   });
 
   it('should display link to model guide documentation', async () => {
@@ -126,8 +126,8 @@ describe('Settings Visual Tests', () => {
     const recommendedText = await findByText(/Recommended free models:/);
     expect(recommendedText).toBeTruthy();
 
-    const currentDefaultText = await findByText(/Current default:/);
-    expect(currentDefaultText).toBeTruthy();
+    const paidAlternativeText = await findByText(/Paid alternative:/);
+    expect(paidAlternativeText).toBeTruthy();
 
     const browseText = await findByText(/Browse models:/);
     expect(browseText).toBeTruthy();
