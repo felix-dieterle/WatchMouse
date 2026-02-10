@@ -19,6 +19,7 @@ describe('SearchService', () => {
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
         useGoogleForEbay: false,
+        usedCarsEnabled: false,
       });
     });
 
@@ -31,6 +32,7 @@ describe('SearchService', () => {
         ebayEnabled: false,
         kleinanzeigenEnabled: true,
         useGoogleForEbay: false,
+        usedCarsEnabled: false,
       });
     });
 
