@@ -110,7 +110,7 @@ class BaseRateLimiter {
       };
     }
 
-    // Critical warning (95%+)
+    // Critical warning (99%+)
     if (usagePercent >= this.criticalThreshold) {
       return {
         canProceed: true,
@@ -121,7 +121,7 @@ class BaseRateLimiter {
       };
     }
 
-    // Warning (80%+)
+    // Warning (70%+)
     if (usagePercent >= this.warningThreshold) {
       return {
         canProceed: true,

@@ -37,20 +37,37 @@ describe('RateLimitIndicator Component', () => {
     expect(getByText('Warning')).toBeTruthy();
   });
 
-  test('should render with red indicator when usage is at 90%', () => {
+  test('should render with yellow indicator when usage is at 98%', () => {
     const { getByText } = render(
       <RateLimitIndicator
         apiName="Test API"
-        usagePercent={0.95}
-        count={4750}
+        usagePercent={0.98}
+        count={4900}
         limit={5000}
         enabled={true}
       />
     );
 
     expect(getByText('Test API')).toBeTruthy();
-    expect(getByText('4750 / 5000 calls')).toBeTruthy();
-    expect(getByText('(95%)')).toBeTruthy();
+    expect(getByText('4900 / 5000 calls')).toBeTruthy();
+    expect(getByText('(98%)')).toBeTruthy();
+    expect(getByText('Warning')).toBeTruthy();
+  });
+
+  test('should render with red indicator when usage is at 99%', () => {
+    const { getByText } = render(
+      <RateLimitIndicator
+        apiName="Test API"
+        usagePercent={0.99}
+        count={4950}
+        limit={5000}
+        enabled={true}
+      />
+    );
+
+    expect(getByText('Test API')).toBeTruthy();
+    expect(getByText('4950 / 5000 calls')).toBeTruthy();
+    expect(getByText('(99%)')).toBeTruthy();
     expect(getByText('Critical')).toBeTruthy();
   });
 

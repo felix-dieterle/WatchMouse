@@ -94,25 +94,25 @@ describe('EbayRateLimiter', () => {
       expect(result.remaining).toBe(4000);
     });
 
-    it('should return warning at 80% usage', async () => {
+    it('should return warning at 70% usage', async () => {
       AsyncStorage.getItem.mockResolvedValue(JSON.stringify({
         date: new Date().toDateString(),
-        count: 4000, // 80% of 5000
+        count: 3500, // 70% of 5000
         lastReset: new Date().toISOString(),
       }));
 
       const result = await rateLimiter.checkLimit();
 
       expect(result.canProceed).toBe(true);
-      expect(result.warning).toContain('80%');
+      expect(result.warning).toContain('70%');
       expect(result.level).toBe('warning');
-      expect(result.remaining).toBe(1000);
+      expect(result.remaining).toBe(1500);
     });
 
-    it('should return critical warning at 95% usage', async () => {
+    it('should return critical warning at 99% usage', async () => {
       AsyncStorage.getItem.mockResolvedValue(JSON.stringify({
         date: new Date().toDateString(),
-        count: 4750, // 95% of 5000
+        count: 4950, // 99% of 5000
         lastReset: new Date().toISOString(),
       }));
 
@@ -121,7 +121,7 @@ describe('EbayRateLimiter', () => {
       expect(result.canProceed).toBe(true);
       expect(result.warning).toContain('almost reached');
       expect(result.level).toBe('critical');
-      expect(result.remaining).toBe(250);
+      expect(result.remaining).toBe(50);
     });
 
     it('should return canProceed=false when limit is reached', async () => {
