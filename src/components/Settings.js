@@ -190,6 +190,30 @@ export default function Settings({ onClose, onSettingsChange }) {
           <Text style={styles.helperText}>
             {apiKey.trim() ? '✓ API key configured - AI features enabled' : '⚠ No API key - Using basic keyword matching'}
           </Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>💡 Choosing a Model</Text>
+            <Text style={styles.infoText}>
+              WatchMouse uses simple AI to match search results. Free models work great!
+            </Text>
+            <Text style={styles.infoText}>
+              <Text style={styles.infoBold}>Recommended free models:</Text>
+            </Text>
+            <Text style={styles.infoText}>
+              • meta-llama/llama-3.2-3b-instruct:free (Best free option)
+            </Text>
+            <Text style={styles.infoText}>
+              • google/gemini-flash-1.5:free (Fast and free)
+            </Text>
+            <Text style={styles.infoText}>
+              <Text style={styles.infoBold}>Current default:</Text> openai/gpt-3.5-turbo (~$0.10 per 1,000 searches)
+            </Text>
+            <Text style={styles.infoText}>
+              See docs/OPENROUTER_MODEL_GUIDE.md for more options and how to change models.
+            </Text>
+            <Text style={[styles.infoText, { marginTop: 8 }]}>
+              <Text style={styles.infoBold}>Browse models:</Text> https://openrouter.ai/collections/free-models
+            </Text>
+          </View>
         </View>
 
         {/* eBay API Key Section */}
@@ -440,6 +464,30 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#fff3e0',
     borderRadius: 5,
+  },
+  infoBox: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1976d2',
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  infoBold: {
+    fontWeight: '600',
+    color: '#1976d2',
   },
   switchContainer: {
     flexDirection: 'row',

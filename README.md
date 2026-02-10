@@ -65,6 +65,8 @@ The app includes a settings screen accessible via the gear icon (⚙️) in the 
   - With a valid API key: AI-powered matching for better search results
   - Without an API key: Falls back to basic keyword matching
   - The app displays a warning banner when no API key is configured
+  - **Choosing a model**: See [OpenRouter Model Guide](docs/OPENROUTER_MODEL_GUIDE.md) for free and cheap model recommendations
+  - **Free models work great!** WatchMouse uses simple AI - no need for expensive models
 
 #### eBay Configuration
 - **eBay API Key**: Enter your API key from [eBay Developers](https://developer.ebay.com/)
@@ -198,6 +200,7 @@ For development builds, simply merge to main - the APK will be built automatical
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 For more information, see:
+- [docs/OPENROUTER_MODEL_GUIDE.md](docs/OPENROUTER_MODEL_GUIDE.md) - OpenRouter model selection guide
 - [docs/EBAY_API_GUIDE.md](docs/EBAY_API_GUIDE.md) - Complete eBay API integration guide
 - [docs/API_CONFIGURATION.md](docs/API_CONFIGURATION.md) - API setup and configuration
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture overview

@@ -22,13 +22,27 @@ WatchMouse uses OpenRouter for AI-powered search matching. This allows the app t
 **For Production APK:**
 The API key should be configured in the app after installation through a settings screen (future feature).
 
+### Choosing the Right Model
+
+WatchMouse performs a simple classification task (matching search queries to product titles), which means **free models work great!** You don't need expensive models like GPT-4.
+
+**For detailed model recommendations and cost comparisons, see [OpenRouter Model Selection Guide](OPENROUTER_MODEL_GUIDE.md).**
+
+**Quick recommendations:**
+- 🆓 **Best Free**: `meta-llama/llama-3.2-3b-instruct:free` - Perfect for WatchMouse, costs $0
+- 💰 **Best Value**: `meta-llama/llama-3.1-8b-instruct` - 10x cheaper than GPT-3.5
+- ⚡ **Current Default**: `openai/gpt-3.5-turbo` - Very reliable, ~$0.10 per 1,000 searches
+
+Browse free models at: https://openrouter.ai/collections/free-models
+
 ### Pricing
 
 OpenRouter offers various models with different pricing:
-- **GPT-3.5-turbo**: ~$0.0005 per 1K tokens (recommended for WatchMouse)
-- **Free models**: Some models available for free with limitations
+- **Free models**: Several models available for free (recommended for WatchMouse!)
+- **GPT-3.5-turbo**: ~$0.0005 per 1K tokens (~$0.0001 per search)
+- **Llama 3.1 8B**: ~$0.00006 per 1K tokens (~$0.00001 per search)
 
-WatchMouse is configured to use GPT-3.5-turbo by default, which is very cost-effective for this use case.
+WatchMouse is configured to use GPT-3.5-turbo by default, which is cost-effective but can be replaced with free models for zero cost.
 
 ## eBay API Setup
 
