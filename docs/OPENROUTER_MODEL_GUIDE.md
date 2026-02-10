@@ -29,12 +29,12 @@ This is a **perfect use case for free or cheap models** - you don't need GPT-4's
 
 These models are **completely free** and work well for WatchMouse:
 
-#### 1. **Meta: Llama 3.2 3B Instruct (Free)** ⭐ BEST FREE OPTION
+#### 1. **Meta: Llama 3.2 3B Instruct (Free)** ⭐ BEST FREE OPTION & CURRENT DEFAULT
 - **Model ID**: `meta-llama/llama-3.2-3b-instruct:free`
 - **Cost**: $0 (free!)
 - **Why it's great**: Fast, reliable, and perfect for simple classification tasks like WatchMouse
 - **Performance**: Excellent for matching product titles to queries
-- **Recommendation**: **Start here!** This is likely all you need.
+- **Recommendation**: **This is the default model!** Works great for most users.
 
 #### 2. **Google: Gemini Flash 1.5 (Free)**
 - **Model ID**: `google/gemini-flash-1.5:free`
@@ -58,7 +58,7 @@ These models are **completely free** and work well for WatchMouse:
 
 If you want the absolute best performance for a tiny cost:
 
-#### 1. **OpenAI: GPT-3.5 Turbo** 💰 CURRENT DEFAULT
+#### 1. **OpenAI: GPT-3.5 Turbo** 💰 PREVIOUS DEFAULT
 - **Model ID**: `openai/gpt-3.5-turbo`
 - **Cost**: ~$0.0005 per 1K tokens (~$0.0001 per search)
 - **Why it's great**: Industry standard, extremely reliable
@@ -180,9 +180,10 @@ To reduce API costs even further:
 
 **Quick Recommendations:**
 
-- 🆓 **Best Free**: `meta-llama/llama-3.2-3b-instruct:free` - Start here!
-- 💰 **Best Value**: `meta-llama/llama-3.1-8b-instruct` - 10x cheaper than GPT-3.5
-- ⚡ **Current Default**: `openai/gpt-3.5-turbo` - Reliable but costs ~$0.10 per 1,000 searches
+- 🆓 **Current Default**: `meta-llama/llama-3.2-3b-instruct:free` - FREE and works great!
+- 🆓 **Alternative Free**: `google/gemini-flash-1.5:free` - Also free and fast
+- 💰 **Best Paid Value**: `meta-llama/llama-3.1-8b-instruct` - 10x cheaper than GPT-3.5
+- ⚡ **Reliable Paid**: `openai/gpt-3.5-turbo` - Previous default, costs ~$0.10 per 1,000 searches
 - ❌ **Avoid**: GPT-4 series - Too expensive for this simple task
 
-**Bottom line**: WatchMouse's AI task is simple. **Use a free model** and save your money! The free models work great for matching product titles to search queries.
+**Bottom line**: WatchMouse's AI task is simple. The **default free model works great** for matching product titles to search queries!
