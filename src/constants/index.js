@@ -52,8 +52,8 @@ export const API_CONFIG = {
     SERVICE_VERSION: '1.0.0',
     RESULTS_PER_PAGE: 20,
     DAILY_RATE_LIMIT: 5000, // Free tier: 5,000 calls per day
-    WARNING_THRESHOLD: 0.8, // Warn at 80% usage (4,000 calls)
-    CRITICAL_THRESHOLD: 0.95, // Critical warning at 95% usage (4,750 calls)
+    WARNING_THRESHOLD: 0.7, // Warn at 70% usage (3,500 calls)
+    CRITICAL_THRESHOLD: 0.99, // Critical warning at 99% usage (4,950 calls)
   },
   KLEINANZEIGEN: {
     BASE_URL: 'https://www.kleinanzeigen.de/s-',
@@ -62,8 +62,8 @@ export const API_CONFIG = {
     BASE_URL: 'https://www.googleapis.com/customsearch/v1',
     RESULTS_PER_PAGE: 10, // Max 10 per request for free tier
     DAILY_RATE_LIMIT: 100, // Free tier: 100 queries per day
-    WARNING_THRESHOLD: 0.8, // Warn at 80% usage (80 queries)
-    CRITICAL_THRESHOLD: 0.95, // Critical warning at 95% usage (95 queries)
+    WARNING_THRESHOLD: 0.7, // Warn at 70% usage (70 queries)
+    CRITICAL_THRESHOLD: 0.99, // Critical warning at 99% usage (99 queries)
   },
   USED_CARS: {
     // Used car platforms use Google Custom Search

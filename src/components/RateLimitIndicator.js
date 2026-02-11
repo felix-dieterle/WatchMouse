@@ -5,9 +5,9 @@ import { StyleSheet, Text, View } from 'react-native';
  * Small colored indicator showing API rate limit status
  * 
  * Colors:
- * - Green: 0-69% usage (safe)
- * - Yellow: 70-89% usage (warning)
- * - Red: 90%+ usage (critical)
+ * - Green: 0-70% usage (safe)
+ * - Yellow: 70-98% usage (warning)
+ * - Red: 99%+ usage (critical)
  * 
  * @param {Object} props
  * @param {string} props.apiName - Name of the API (e.g., "eBay", "OpenRouter")
@@ -29,15 +29,15 @@ export default function RateLimitIndicator({
       return '#ccc'; // Gray for disabled
     }
     
-    if (usagePercent >= 0.9) {
-      return '#f44336'; // Red for 90%+
+    if (usagePercent >= 0.99) {
+      return '#f44336'; // Red for 99%+
     }
     
-    if (usagePercent >= 0.7) {
-      return '#ff9800'; // Yellow/Orange for 70%+
+    if (usagePercent > 0.7) {
+      return '#ff9800'; // Yellow/Orange for >70%
     }
     
-    return '#4caf50'; // Green for < 70%
+    return '#4caf50'; // Green for <= 70%
   };
 
   // Determine status text
@@ -46,11 +46,11 @@ export default function RateLimitIndicator({
       return 'Disabled';
     }
     
-    if (usagePercent >= 0.9) {
+    if (usagePercent >= 0.99) {
       return 'Critical';
     }
     
-    if (usagePercent >= 0.7) {
+    if (usagePercent > 0.7) {
       return 'Warning';
     }
     

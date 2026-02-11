@@ -15,7 +15,7 @@ describe('RateLimitIndicator - Visual States', () => {
       <View style={styles.container}>
         <Text style={styles.title}>Rate Limit Indicator States</Text>
         
-        <Text style={styles.sectionTitle}>Green - Safe (0-69%)</Text>
+        <Text style={styles.sectionTitle}>Green - Safe (0-70%)</Text>
         <RateLimitIndicator
           apiName="eBay API"
           usagePercent={0.02}
@@ -24,7 +24,7 @@ describe('RateLimitIndicator - Visual States', () => {
           enabled={true}
         />
         
-        <Text style={styles.sectionTitle}>Yellow - Warning (70-89%)</Text>
+        <Text style={styles.sectionTitle}>Yellow - Warning (70-98%)</Text>
         <RateLimitIndicator
           apiName="eBay API"
           usagePercent={0.75}
@@ -33,11 +33,11 @@ describe('RateLimitIndicator - Visual States', () => {
           enabled={true}
         />
         
-        <Text style={styles.sectionTitle}>Red - Critical (90%+)</Text>
+        <Text style={styles.sectionTitle}>Red - Critical (99%+)</Text>
         <RateLimitIndicator
           apiName="eBay API"
-          usagePercent={0.95}
-          count={4750}
+          usagePercent={0.99}
+          count={4950}
           limit={5000}
           enabled={true}
         />
@@ -71,7 +71,7 @@ describe('RateLimitIndicator - Visual States', () => {
     console.log('\n=== Rate Limit Indicator Visual States ===');
     console.log('1. Green (Safe): 2% usage');
     console.log('2. Yellow (Warning): 75% usage');
-    console.log('3. Red (Critical): 95% usage');
+    console.log('3. Red (Critical): 99% usage');
     console.log('4. OpenRouter: No hard limit');
     console.log('5. Disabled: API not enabled');
     console.log('==========================================\n');
