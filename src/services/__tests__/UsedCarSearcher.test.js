@@ -302,9 +302,14 @@ describe('UsedCarSearcher', () => {
         },
       };
 
+      // Mock responses:
+      // 1st call: eBay (via Google fallback) - return empty
+      // 2nd call: mobile.de
+      // 3rd call: AutoScout24
       axios.get
-        .mockResolvedValueOnce(mockResponse)
-        .mockResolvedValueOnce({ data: { items: [] } });
+        .mockResolvedValueOnce({ data: { items: [] } }) // eBay Google fallback
+        .mockResolvedValueOnce(mockResponse) // mobile.de
+        .mockResolvedValueOnce({ data: { items: [] } }); // AutoScout24
 
       const results = await searchService.searchAllPlatforms('BMW', null);
 
