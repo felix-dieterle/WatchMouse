@@ -283,10 +283,69 @@ function AppContent() {
     return sorted;
   }, [matches, platformFilter, readFilter, matchFilter, matchSort]);
 
+  // Validate API keys before running search
+  const validateApiKeys = useCallback(() => {
+    const hasEbayApi = settings.ebayApiKey && settings.ebayApiKey.trim().length > 0;
+    const hasGoogleApi = settings.googleApiKey && settings.googleApiKey.trim().length > 0 && 
+                         settings.googleCx && settings.googleCx.trim().length > 0;
+    
+    // Check if any enabled platform has API access
+    const canSearchEbay = settings.ebayEnabled && (hasEbayApi || hasGoogleApi);
+    const canSearchUsedCars = settings.usedCarsEnabled && hasGoogleApi;
+    
+    // Kleinanzeigen is always disabled since it has no API
+    const hasAnyApiAccess = canSearchEbay || canSearchUsedCars;
+    
+    if (!hasAnyApiAccess) {
+      // Build a helpful message based on enabled platforms
+      let message = 'No API keys configured. Please add API keys in Settings to enable searches.\n\n';
+      
+      if (settings.ebayEnabled) {
+        message += '• eBay: Add eBay API key OR Google Custom Search credentials\n';
+      }
+      if (settings.usedCarsEnabled) {
+        message += '• Used Cars: Add Google Custom Search credentials\n';
+      }
+      if (settings.kleinanzeigenEnabled) {
+        message += '\nNote: Kleinanzeigen is not currently supported (no API available).';
+      }
+      
+      Alert.alert(
+        'API Keys Required',
+        message,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => setShowSettings(true) }
+        ]
+      );
+      return false;
+    }
+    
+    // Warn if Kleinanzeigen is the only enabled platform
+    if (settings.kleinanzeigenEnabled && !settings.ebayEnabled && !settings.usedCarsEnabled) {
+      Alert.alert(
+        'Platform Not Available',
+        'Kleinanzeigen is not currently supported (no API available).\n\nPlease enable eBay or Used Cars in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => setShowSettings(true) }
+        ]
+      );
+      return false;
+    }
+    
+    return true;
+  }, [settings, setShowSettings]);
+
   // Run all saved searches in batch
   const runAllSearches = useCallback(async () => {
     if (searches.length === 0) {
       Alert.alert('No Searches', 'Please add some searches first.');
+      return;
+    }
+
+    // Validate API keys before running searches
+    if (!validateApiKeys()) {
       return;
     }
 
@@ -322,10 +381,15 @@ function AppContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [searches, settings, matches, saveMatches]);
+  }, [searches, settings, matches, saveMatches, validateApiKeys]);
 
   // Run search for a specific query
   const runSearch = useCallback(async (search) => {
+    // Validate API keys before running search
+    if (!validateApiKeys()) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Use BatchSearchService for optimized searching
@@ -349,7 +413,7 @@ function AppContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [settings, matches, saveMatches]);
+  }, [settings, matches, saveMatches, validateApiKeys]);
 
   // Render item for search list - memoized
   const renderSearchItem = useCallback(({ item }) => (
