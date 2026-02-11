@@ -593,16 +593,16 @@ describe('SearchService', () => {
       expect(results.length).toBe(0);
     });
 
-    it('should return empty array when useGoogleForEbay is false and no eBay API key', async () => {
+    it('should use Google as automatic fallback when no eBay API key is configured', async () => {
       const googleService = new SearchService({
         ebayEnabled: true,
         googleApiKey: 'test-google-api-key',
         googleCx: 'test-cx-id',
-        useGoogleForEbay: false, // Disabled
+        useGoogleForEbay: false, // Flag doesn't matter anymore
       });
 
-      // With our new implementation, Google is used as fallback regardless of useGoogleForEbay flag
-      // when no eBay API key is available
+      // With our new implementation, Google is used as fallback automatically
+      // when no eBay API key is available, regardless of useGoogleForEbay flag
       const mockGoogleResponse = {
         data: {
           items: [
