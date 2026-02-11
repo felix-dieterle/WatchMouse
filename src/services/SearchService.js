@@ -187,55 +187,81 @@ class EbaySearcher {
       return cached;
     }
     
-    // If no eBay API key is configured, try Google Custom Search fallback
-    if (!this.apiKey) {
-      if (this.useGoogleForEbay && this.googleApiKey && this.googleCx) {
-        console.log('eBay: No eBay API key. Using Google Custom Search as fallback...');
-        try {
-          const results = await this.searchWithGoogle(query, maxPrice);
-          searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
-          return results;
-        } catch (error) {
-          console.error('Google Custom Search error:', redactSensitiveData(error.message || ''));
-          return [];
+    // Priority 1: Try eBay API if key is available
+    if (this.apiKey) {
+      // Check rate limits before making API call
+      const limitCheck = await ebayRateLimiter.checkLimit();
+      
+      // Log warnings if approaching limit
+      if (limitCheck.warning) {
+        if (limitCheck.level === 'critical') {
+          console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+        } else if (limitCheck.level === 'warning') {
+          console.warn(`⚠️ ${limitCheck.warning}`);
         }
       }
       
-      console.warn('eBay: No API key configured. Please add EBAY_API_KEY to enable eBay search.');
-      console.warn('eBay: Or enable Google Custom Search fallback in settings.');
-      console.warn('eBay: Get your API key at https://developer.ebay.com/');
-      return [];
-    }
+      // If limit exceeded, fallback to Google if available
+      if (!limitCheck.canProceed) {
+        console.error(`❌ ${limitCheck.warning}`);
+        if (this.googleApiKey && this.googleCx) {
+          console.log('eBay: Rate limit exceeded. Falling back to Google Custom Search...');
+          try {
+            const results = await this.searchWithGoogle(query, maxPrice);
+            searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+            return results;
+          } catch (error) {
+            console.error('Google Custom Search error:', redactSensitiveData(error.message || ''));
+            return [];
+          }
+        }
+        return [];
+      }
 
-    // Check rate limits before making API call
-    const limitCheck = await ebayRateLimiter.checkLimit();
-    
-    // Log warnings if approaching limit
-    if (limitCheck.warning) {
-      if (limitCheck.level === 'critical') {
-        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
-      } else if (limitCheck.level === 'warning') {
-        console.warn(`⚠️ ${limitCheck.warning}`);
+      // Try eBay API
+      try {
+        const results = await this.searchWithAPI(query, maxPrice);
+        
+        // Cache the results
+        searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+        return results;
+      } catch (error) {
+        console.error('eBay API error:', redactSensitiveData(error.message || ''));
+        console.warn('eBay: Failed to fetch results. Trying Google Custom Search fallback...');
+        
+        // Priority 2: Fallback to Google Custom Search on eBay API error
+        if (this.googleApiKey && this.googleCx) {
+          try {
+            const results = await this.searchWithGoogle(query, maxPrice);
+            searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+            return results;
+          } catch (googleError) {
+            console.error('Google Custom Search error:', redactSensitiveData(googleError.message || ''));
+            return [];
+          }
+        }
+        return [];
       }
     }
     
-    // If limit exceeded, return empty results with error
-    if (!limitCheck.canProceed) {
-      console.error(`❌ ${limitCheck.warning}`);
-      return [];
+    // Priority 2: If no eBay API key, try Google Custom Search as fallback
+    if (this.googleApiKey && this.googleCx) {
+      console.log('eBay: No eBay API key. Using Google Custom Search as fallback...');
+      try {
+        const results = await this.searchWithGoogle(query, maxPrice);
+        searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+        return results;
+      } catch (error) {
+        console.error('Google Custom Search error:', redactSensitiveData(error.message || ''));
+        return [];
+      }
     }
-
-    try {
-      const results = await this.searchWithAPI(query, maxPrice);
-      
-      // Cache the results
-      searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
-      return results;
-    } catch (error) {
-      console.error('eBay API error:', redactSensitiveData(error.message || ''));
-      console.error('eBay: Failed to fetch results. Please check your API key and network connection.');
-      return [];
-    }
+    
+    // No API keys configured
+    console.warn('eBay: No API key configured. Please add eBay API key or Google Custom Search credentials.');
+    console.warn('eBay: Get your eBay API key at https://developer.ebay.com/');
+    console.warn('eBay: Or setup Google Custom Search at https://console.cloud.google.com/');
+    return [];
   }
 
   async searchWithAPI(query, maxPrice) {
@@ -478,7 +504,7 @@ class EbaySearcher {
 
 /**
  * Kleinanzeigen platform searcher
- * Currently returns mock data - real implementation requires web scraping
+ * Currently not implemented - real implementation requires web scraping or official API
  */
 class KleinanzeigenSearcher {
   constructor() {
@@ -486,29 +512,11 @@ class KleinanzeigenSearcher {
   }
 
   async search(query, maxPrice) {
-    // Mock implementation - in production, scrape or use API if available
-    // For now, return mock data for demonstration
-    return this.getMockResults(query, maxPrice, PLATFORMS.KLEINANZEIGEN);
-  }
-
-  getMockResults(query, maxPrice, platform) {
-    // Generate mock results for demonstration
-    const mockItems = [
-      { title: `${query} neuwertig`, price: 120 },
-      { title: `${query} günstig abzugeben`, price: 90 },
-      { title: `Verkaufe ${query}`, price: 140 },
-    ];
-
-    const timestamp = Date.now();
-    return mockItems
-      .filter(item => !maxPrice || item.price <= maxPrice)
-      .map((item, idx) => ({
-        id: `${platform}-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
-        title: item.title,
-        price: item.price,
-        platform: platform,
-        url: `https://www.kleinanzeigen.de/s-anzeige/mock${timestamp}${idx}`,
-      }));
+    // No mock data - return empty results
+    // Real implementation requires web scraping or official API
+    console.warn('Kleinanzeigen: No API available. Kleinanzeigen search is not currently supported.');
+    console.warn('Kleinanzeigen: Please disable Kleinanzeigen in settings or wait for future implementation.');
+    return [];
   }
 }
 
