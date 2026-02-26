@@ -240,9 +240,9 @@ export default function Settings({ onClose, onSettingsChange }) {
 
         {/* Google Custom Search API Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Google Custom Search (eBay Fallback)</Text>
+          <Text style={styles.sectionTitle}>Google Custom Search (eBay & Kleinanzeigen)</Text>
           <Text style={[styles.helperText, { marginBottom: 12 }]}>
-            Use Google Custom Search API when eBay API key is not available. Requires both API Key and Search Engine ID.
+            Used to search eBay (fallback) and Kleinanzeigen via Google Custom Search API. Requires both API Key and Search Engine ID.
           </Text>
           
           <Text style={styles.label}>Google API Key</Text>
@@ -316,7 +316,11 @@ export default function Settings({ onClose, onSettingsChange }) {
           <View style={styles.switchContainer}>
             <View style={styles.switchLabel}>
               <Text style={styles.label}>Kleinanzeigen</Text>
-              <Text style={styles.helperText}>Search on Kleinanzeigen platform</Text>
+              <Text style={styles.helperText}>
+                {(googleApiKey.trim() && googleCx.trim())
+                  ? '✓ Google API configured – searching kleinanzeigen.de'
+                  : '⚠ Requires Google Custom Search API credentials'}
+              </Text>
             </View>
             <Switch
               value={kleinanzeigenEnabled}
@@ -374,7 +378,7 @@ export default function Settings({ onClose, onSettingsChange }) {
             usagePercent={googleRateLimit.usagePercent}
             count={googleRateLimit.count}
             limit={googleRateLimit.limit}
-            enabled={useGoogleForEbay && googleApiKey.trim() !== '' && googleCx.trim() !== ''}
+            enabled={(useGoogleForEbay || kleinanzeigenEnabled) && googleApiKey.trim() !== '' && googleCx.trim() !== ''}
           />
           
           <RateLimitIndicator

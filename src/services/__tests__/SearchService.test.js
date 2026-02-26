@@ -109,7 +109,7 @@ describe('SearchService', () => {
       });
       const results = await kleinanzeigenOnlyService.searchAllPlatforms('test');
       
-      // Kleinanzeigen now returns empty array (no mock data)
+      // Without Google credentials, Kleinanzeigen returns empty array
       expect(results).toEqual([]);
     });
 
@@ -262,11 +262,11 @@ describe('SearchService', () => {
       delete process.env.EBAY_API_KEY;
     });
 
-    it('should return empty array when only Kleinanzeigen is enabled (no API available)', async () => {
+    it('should return empty array when only Kleinanzeigen is enabled (no Google API configured)', async () => {
       // Use a unique query to avoid cache collision
       const results = await searchService.searchAllPlatforms('unique-kleinanzeigen-only-query-789');
       
-      // Without API key, no results are returned (Kleinanzeigen has no API)
+      // Without Google API credentials, Kleinanzeigen returns empty results
       expect(results).toEqual([]);
     });
   });
@@ -444,12 +444,120 @@ describe('SearchService', () => {
   });
 
   describe('Kleinanzeigen integration', () => {
-    it('should return empty array (no mock data, no API available)', async () => {
+    it('should return empty array when Google API credentials are not configured', async () => {
       const results = await searchService.platforms.kleinanzeigen.search('Sofa', 200);
       
       expect(results).toBeDefined();
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBe(0);
+    });
+
+    it('should accept Google API credentials via SearchService constructor', () => {
+      const service = new SearchService({
+        googleApiKey: 'test-google-key',
+        googleCx: 'test-cx',
+      });
+      expect(service.platforms.kleinanzeigen.googleApiKey).toBe('test-google-key');
+      expect(service.platforms.kleinanzeigen.googleCx).toBe('test-cx');
+    });
+
+    it('should search kleinanzeigen.de using Google Custom Search when credentials are configured', async () => {
+      const mockGoogleResponse = {
+        data: {
+          items: [
+            {
+              title: 'Sofa zu verkaufen – Kleinanzeigen',
+              link: 'https://www.kleinanzeigen.de/s-anzeige/sofa/123456789',
+              snippet: 'Gut erhaltenes Sofa für 150 €. Abholung in Berlin.',
+            },
+            {
+              title: 'Couch günstig – Kleinanzeigen',
+              link: 'https://www.kleinanzeigen.de/s-anzeige/couch/987654321',
+              snippet: 'Schöne Couch, EUR 80,- VB.',
+            },
+          ],
+        },
+      };
+
+      axios.get.mockResolvedValue(mockGoogleResponse);
+
+      const service = new SearchService({
+        kleinanzeigenEnabled: true,
+        googleApiKey: 'test-google-key',
+        googleCx: 'test-cx',
+      });
+
+      const results = await service.platforms.kleinanzeigen.search('Sofa-unique-xyz', null);
+
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      const callUrl = axios.get.mock.calls[0][0];
+      expect(callUrl).toContain('googleapis.com/customsearch');
+      expect(callUrl).toContain('kleinanzeigen.de');
+
+      expect(results.length).toBe(2);
+      expect(results[0].platform).toBe('Kleinanzeigen');
+      expect(results[0].price).toBe(150);
+      expect(results[1].price).toBe(80);
+    });
+
+    it('should filter Kleinanzeigen results by maxPrice', async () => {
+      const mockGoogleResponse = {
+        data: {
+          items: [
+            {
+              title: 'Expensive Sofa',
+              link: 'https://www.kleinanzeigen.de/s-anzeige/sofa/111',
+              snippet: 'Premium Sofa für EUR 600,-.',
+            },
+            {
+              title: 'Cheap Sofa',
+              link: 'https://www.kleinanzeigen.de/s-anzeige/sofa/222',
+              snippet: 'Einfaches Sofa für 80 €.',
+            },
+          ],
+        },
+      };
+
+      axios.get.mockResolvedValue(mockGoogleResponse);
+
+      const service = new SearchService({
+        kleinanzeigenEnabled: true,
+        googleApiKey: 'test-google-key',
+        googleCx: 'test-cx',
+      });
+
+      const results = await service.platforms.kleinanzeigen.search('Sofa-filter-unique', 200);
+
+      expect(results.length).toBe(1);
+      expect(results[0].title).toBe('Cheap Sofa');
+      expect(results[0].price).toBe(80);
+    });
+
+    it('should return empty array when Google API call fails', async () => {
+      axios.get.mockRejectedValue(new Error('Network error'));
+
+      const service = new SearchService({
+        kleinanzeigenEnabled: true,
+        googleApiKey: 'test-google-key',
+        googleCx: 'test-cx',
+      });
+
+      const results = await service.platforms.kleinanzeigen.search('Sofa-error-unique', null);
+
+      expect(results).toEqual([]);
+    });
+
+    it('should skip API call for empty query', async () => {
+      const service = new SearchService({
+        kleinanzeigenEnabled: true,
+        googleApiKey: 'test-google-key',
+        googleCx: 'test-cx',
+      });
+
+      const results = await service.platforms.kleinanzeigen.search('', null);
+
+      expect(axios.get).not.toHaveBeenCalled();
+      expect(results).toEqual([]);
     });
   });
 

@@ -304,10 +304,12 @@ describe('UsedCarSearcher', () => {
 
       // Mock responses:
       // 1st call: eBay (via Google fallback) - return empty
-      // 2nd call: mobile.de
-      // 3rd call: AutoScout24
+      // 2nd call: Kleinanzeigen (via Google) - return empty
+      // 3rd call: mobile.de
+      // 4th call: AutoScout24
       axios.get
         .mockResolvedValueOnce({ data: { items: [] } }) // eBay Google fallback
+        .mockResolvedValueOnce({ data: { items: [] } }) // Kleinanzeigen Google
         .mockResolvedValueOnce(mockResponse) // mobile.de
         .mockResolvedValueOnce({ data: { items: [] } }); // AutoScout24
 
