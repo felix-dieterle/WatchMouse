@@ -25,6 +25,8 @@ import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
   DEFAULT_SETTINGS,
+  APP_VERSION,
+  BUILD_NUMBER,
 } from './src/constants';
 
 /**
@@ -60,6 +62,7 @@ function AppContent() {
   const [newSearchMaxPrice, setNewSearchMaxPrice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [showSplash, setShowSplash] = useState(true);
   
   // Search and filter states
   const [searchFilter, setSearchFilter] = useState('');
@@ -73,6 +76,8 @@ function AppContent() {
     loadSettings();
     loadSearches();
     loadMatches();
+    const splashTimer = setTimeout(() => setShowSplash(false), 2000);
+    return () => clearTimeout(splashTimer);
   }, []);
 
   // Load settings from storage
@@ -482,6 +487,14 @@ function AppContent() {
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
+
+      {showSplash && (
+        <View style={styles.splashOverlay}>
+          <Text style={styles.splashTitle}>4You WatchMouse</Text>
+          <Text style={styles.splashSubtitle}>Shopping Deal Monitor</Text>
+          <Text style={styles.splashVersion}>v{APP_VERSION} (Build {BUILD_NUMBER})</Text>
+        </View>
+      )}
       
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -758,6 +771,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  splashOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#2196F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  splashTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  splashSubtitle: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 20,
+  },
+  splashVersion: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
   },
   header: {
     backgroundColor: '#2196F3',

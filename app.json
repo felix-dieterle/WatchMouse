@@ -24,6 +24,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.watchmouse.app",
+      "versionCode": 1,
       "permissions": [
         "android.permission.INTERNET"
       ]
