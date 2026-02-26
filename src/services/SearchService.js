@@ -129,11 +129,23 @@ export class SearchService {
       }
     }
 
+    console.log(`searchAllPlatforms: ${results.length} raw results for "${query}"`);
+
     // Deduplicate results by title similarity
     const deduplicated = ResultDeduplicator.deduplicateByTitle(results);
+    if (deduplicated.length < results.length) {
+      console.log(`searchAllPlatforms: deduplication removed ${results.length - deduplicated.length} duplicates (${deduplicated.length} remain)`);
+    }
 
     // Filter out results that already exist in saved matches
     const newResults = ResultDeduplicator.filterOutExisting(deduplicated, existingMatches);
+    if (newResults.length < deduplicated.length) {
+      console.log(`searchAllPlatforms: ${deduplicated.length - newResults.length} results already in saved matches, ${newResults.length} new results`);
+    }
+
+    if (newResults.length === 0) {
+      console.warn(`searchAllPlatforms: 0 new results for "${query}" (raw=${results.length}, deduped=${deduplicated.length}, afterExistingFilter=${newResults.length})`);
+    }
 
     return newResults;
   }

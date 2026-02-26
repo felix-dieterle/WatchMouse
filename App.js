@@ -18,6 +18,11 @@ import { AIService } from './src/services/AIService';
 import { BatchSearchService } from './src/services/BatchSearchService';
 import { SettingsService } from './src/services/SettingsService';
 import Settings from './src/components/Settings';
+import LogView from './src/components/LogView';
+import { logger } from './src/utils/logger';
+
+// Start capturing console output so all service logs appear in the in-app log view
+logger.interceptConsole();
 import { 
   STORAGE_KEYS, 
   SORT_OPTIONS, 
@@ -58,6 +63,7 @@ function AppContent() {
   const [matches, setMatches] = useState([]);
   const [showAddSearch, setShowAddSearch] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
   const [newSearchQuery, setNewSearchQuery] = useState('');
   const [newSearchMaxPrice, setNewSearchMaxPrice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -396,6 +402,9 @@ function AppContent() {
     }
 
     setIsLoading(true);
+    const aiService = new AIService(settings.openrouterApiKey);
+    const aiEnabled = aiService.hasValidApiKey();
+    console.log(`runSearch: "${search.query}"${search.maxPrice ? ` (max €${search.maxPrice})` : ''} | mode: ${aiEnabled ? 'AI' : 'keyword'} | eBay: ${settings.ebayEnabled ? 'on' : 'off'} | usedCars: ${settings.usedCarsEnabled ? 'on' : 'off'}`);
     try {
       // Use BatchSearchService for optimized searching
       const batchService = new BatchSearchService(settings);
@@ -403,13 +412,14 @@ function AppContent() {
       // Run single search with existing matches to avoid duplicates
       const newMatches = await batchService.runSingleSearch(search, matches);
       
+      console.log(`runSearch: "${search.query}" → ${newMatches.length} new match(es)`);
+      if (newMatches.length === 0) {
+        console.warn(`runSearch: 0 matches for "${search.query}" – check logs above for details`);
+      }
+
       // Save new matches
       const updatedMatches = [...matches, ...newMatches];
       saveMatches(updatedMatches);
-      
-      // Determine if AI was used
-      const aiService = new AIService(settings.openrouterApiKey);
-      const aiEnabled = aiService.hasValidApiKey();
       
       Alert.alert('Success', SUCCESS_MESSAGES.SEARCH_COMPLETE(newMatches.length, aiEnabled));
     } catch (error) {
@@ -502,14 +512,24 @@ function AppContent() {
             <Text style={styles.title}>4You WatchMouse</Text>
             <Text style={styles.subtitle}>Shopping Deal Monitor</Text>
           </View>
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => setShowSettings(true)}
-            accessibilityLabel="Settings"
-            accessibilityRole="button"
-          >
-            <Text style={styles.settingsButtonText}>⚙️</Text>
-          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setShowLogs(true)}
+              accessibilityLabel="View logs"
+              accessibilityRole="button"
+            >
+              <Text style={styles.settingsButtonText}>📋</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setShowSettings(true)}
+              accessibilityLabel="Settings"
+              accessibilityRole="button"
+            >
+              <Text style={styles.settingsButtonText}>⚙️</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         {(!settings.openrouterApiKey || !settings.openrouterApiKey.trim()) && (
           <View style={styles.warningBanner}>
@@ -528,6 +548,11 @@ function AppContent() {
           onSettingsChange={handleSettingsChange}
         />
       </Modal>
+
+      <LogView
+        visible={showLogs}
+        onClose={() => setShowLogs(false)}
+      />
 
       <ScrollView style={styles.content}>
         <View style={styles.section}>
@@ -817,6 +842,10 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: 8,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   settingsButtonText: {
     fontSize: 28,
