@@ -6,6 +6,13 @@
  */
 
 /**
+ * App version information
+ * Keep in sync with app.json version and android.versionCode
+ */
+export const APP_VERSION = '1.0.0';
+export const BUILD_NUMBER = 1;
+
+/**
  * Platform identifiers
  * Used for platform-specific logic and filtering
  */

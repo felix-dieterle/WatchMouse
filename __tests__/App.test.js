@@ -47,12 +47,17 @@ describe('App Component', () => {
   });
 
   test('should render app title', async () => {
-    const { getByText } = render(<App />);
+    const { getAllByText } = render(<App />);
     
     await waitFor(() => {
-      expect(getByText('4You WatchMouse')).toBeTruthy();
-      expect(getByText('Shopping Deal Monitor')).toBeTruthy();
+      expect(getAllByText('4You WatchMouse').length).toBeGreaterThan(0);
+      expect(getAllByText('Shopping Deal Monitor').length).toBeGreaterThan(0);
     });
+  });
+
+  test('should show splash screen with version and build number on startup', () => {
+    const { getByText } = render(<App />);
+    expect(getByText(/v\d+\.\d+\.\d+.*Build \d+/)).toBeTruthy();
   });
 
   test('should load settings on mount', async () => {
@@ -140,10 +145,10 @@ describe('App Component', () => {
   test('should handle AsyncStorage errors gracefully', async () => {
     AsyncStorage.getItem.mockRejectedValue(new Error('Storage error'));
 
-    const { getByText } = render(<App />);
+    const { getAllByText } = render(<App />);
     
     await waitFor(() => {
-      expect(getByText('4You WatchMouse')).toBeTruthy();
+      expect(getAllByText('4You WatchMouse').length).toBeGreaterThan(0);
     });
     
     // App should still render even with storage errors
@@ -153,10 +158,10 @@ describe('App Component', () => {
   test('should handle empty searches list', async () => {
     AsyncStorage.getItem.mockResolvedValue(null);
 
-    const { getByText } = render(<App />);
+    const { getAllByText } = render(<App />);
     
     await waitFor(() => {
-      expect(getByText('4You WatchMouse')).toBeTruthy();
+      expect(getAllByText('4You WatchMouse').length).toBeGreaterThan(0);
     });
     
     // App should render even with no saved searches
