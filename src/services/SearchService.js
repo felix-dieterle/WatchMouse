@@ -42,7 +42,10 @@ export class SearchService {
         platformSettings.googleCx,
         this.platformSettings.useGoogleForEbay
       ),
-      kleinanzeigen: new KleinanzeigenSearcher(),
+      kleinanzeigen: new KleinanzeigenSearcher(
+        platformSettings.googleApiKey,
+        platformSettings.googleCx,
+      ),
       usedCars: new UsedCarSearcher(
         platformSettings.googleApiKey,
         platformSettings.googleCx
@@ -504,19 +507,159 @@ class EbaySearcher {
 
 /**
  * Kleinanzeigen platform searcher
- * Currently not implemented - real implementation requires web scraping or official API
+ * Searches kleinanzeigen.de via Google Custom Search API using the site: operator.
+ * Requires Google API key and Custom Search Engine ID to be configured.
  */
 class KleinanzeigenSearcher {
-  constructor() {
-    this.baseUrl = API_CONFIG.KLEINANZEIGEN.BASE_URL;
+  /**
+   * @param {string} [googleApiKey=''] - Google Custom Search API key
+   * @param {string} [googleCx=''] - Google Custom Search Engine ID
+   */
+  constructor(googleApiKey = '', googleCx = '') {
+    this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
+    this.googleCx = googleCx || process.env.GOOGLE_CX || '';
   }
 
+  /**
+   * Search kleinanzeigen.de for matching listings
+   * @param {string} query - Search query
+   * @param {number|null} maxPrice - Maximum price filter in EUR (optional)
+   * @returns {Promise<Array>} Array of standardized search results
+   */
   async search(query, maxPrice) {
-    // No mock data - return empty results
-    // Real implementation requires web scraping or official API
-    console.warn('Kleinanzeigen: No API available. Kleinanzeigen search is not currently supported.');
-    console.warn('Kleinanzeigen: Please disable Kleinanzeigen in settings or wait for future implementation.');
-    return [];
+    if (!this.googleApiKey || !this.googleCx) {
+      console.warn('Kleinanzeigen: Google API credentials not configured. Please add Google API Key and CX in settings.');
+      return [];
+    }
+
+    // Validate query
+    if (!query || query.trim() === '') {
+      console.log('Kleinanzeigen: Empty query, skipping API call');
+      return [];
+    }
+
+    // Generate cache key
+    const cacheKey = `kleinanzeigen:${query}:${maxPrice || 'no-max'}`;
+
+    // Check cache first
+    const cached = searchCache.get(cacheKey);
+    if (cached) {
+      console.log('Kleinanzeigen: Returning cached results');
+      return cached;
+    }
+
+    // Check rate limits before making API call
+    const limitCheck = await googleRateLimiter.checkLimit();
+
+    if (limitCheck.warning) {
+      if (limitCheck.level === 'critical') {
+        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+      } else if (limitCheck.level === 'warning') {
+        console.warn(`⚠️ ${limitCheck.warning}`);
+      }
+    }
+
+    if (!limitCheck.canProceed) {
+      console.error(`❌ ${limitCheck.warning}`);
+      return [];
+    }
+
+    try {
+      // Search specifically on kleinanzeigen.de using site: operator
+      const searchQuery = `site:kleinanzeigen.de ${query}`;
+      const params = {
+        key: this.googleApiKey,
+        cx: this.googleCx,
+        q: searchQuery,
+        num: API_CONFIG.GOOGLE_CUSTOM_SEARCH.RESULTS_PER_PAGE,
+      };
+
+      const queryString = new URLSearchParams(params).toString();
+      const url = `${API_CONFIG.GOOGLE_CUSTOM_SEARCH.BASE_URL}?${queryString}`;
+
+      console.log(`Kleinanzeigen: Searching for "${query}" on kleinanzeigen.de`);
+
+      const response = await axios.get(url, {
+        timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+      });
+
+      // Increment rate limit counter after successful HTTP request
+      await googleRateLimiter.incrementCount();
+
+      const results = this.parseGoogleResponse(response.data, query, maxPrice);
+      searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+      return results;
+    } catch (error) {
+      console.error('Kleinanzeigen search error:', redactSensitiveData(error.message || ''));
+      return [];
+    }
+  }
+
+  /**
+   * Parse Google Custom Search API response for kleinanzeigen.de results
+   * @param {Object} data - Google API response data
+   * @param {string} query - Original search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Array} Array of standardized search results
+   */
+  parseGoogleResponse(data, query, maxPrice) {
+    try {
+      if (!data.items || data.items.length === 0) {
+        console.log('Kleinanzeigen: No items found in response');
+        return [];
+      }
+
+      console.log(`Kleinanzeigen: Found ${data.items.length} items for query "${query}"`);
+
+      // Generate timestamp once for all items in this batch
+      const batchTimestamp = Date.now();
+
+      return data.items
+        .map(item => {
+          // Extract Kleinanzeigen item ID from URL
+          // URL pattern: https://www.kleinanzeigen.de/s-anzeige/title/123456789-cat-loc
+          const urlMatch = item.link?.match(/\/(\d+)(?:-\d+-\d+)?(?:$|\/)/);
+          const itemId = urlMatch ? urlMatch[1] : '';
+
+          const title = item.title || 'No title';
+          const snippet = item.snippet || '';
+
+          // Try to extract price from snippet
+          // Patterns: "99,- €", "99 €", "EUR 99,99", "9.999 €"
+          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*(\d[\d.,]*)/i) ||
+                             snippet.match(/(\d[\d.,]*)\s*(?:EUR|€)/i);
+          let price = 0;
+          if (priceMatch) {
+            const priceStr = priceMatch[1]
+              .replace(/,[-\s]?$/, '') // Remove trailing German price notation (e.g. "80," or "80,-")
+              .replace(/\./g, '') // Remove thousand separators (German: 9.999)
+              .replace(',', '.'); // Replace decimal comma with dot
+            price = parseFloat(priceStr);
+          }
+
+          return {
+            id: `${PLATFORMS.KLEINANZEIGEN}-${itemId || batchTimestamp}-${Math.random().toString(36).slice(2, 11)}`,
+            title: title,
+            price: price,
+            currency: 'EUR',
+            platform: PLATFORMS.KLEINANZEIGEN,
+            url: item.link || '',
+            condition: '',
+            location: '',
+            timestamp: new Date(batchTimestamp).toISOString(),
+            snippet: snippet,
+          };
+        })
+        // Filter by max price if specified (only if price was extracted)
+        .filter(item => {
+          if (!maxPrice) { return true; }
+          if (item.price === 0) { return true; } // Include items where price couldn't be extracted
+          return item.price <= maxPrice;
+        });
+    } catch (error) {
+      console.error('Error parsing Kleinanzeigen response:', redactSensitiveData(error.message || String(error)));
+      return [];
+    }
   }
 }
 
