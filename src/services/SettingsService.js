@@ -57,6 +57,15 @@ export const SettingsService = {
         console.error('Error loading Google CX from SecureStore:', secureError);
         settings.googleCx = '';
       }
+
+      // Load SerpAPI key securely from SecureStore
+      try {
+        const secureSerpApiKey = await SecureStore.getItemAsync(STORAGE_KEYS.SECURE_SERP_API_KEY);
+        settings.serpApiKey = secureSerpApiKey || '';
+      } catch (secureError) {
+        console.error('Error loading SerpAPI key from SecureStore:', secureError);
+        settings.serpApiKey = '';
+      }
       
       return settings;
     } catch (error) {
@@ -78,7 +87,8 @@ export const SettingsService = {
         openrouterApiKey, 
         ebayApiKey, 
         googleApiKey, 
-        googleCx, 
+        googleCx,
+        serpApiKey,
         ...nonSensitiveSettings 
       } = settings;
       
@@ -134,6 +144,17 @@ export const SettingsService = {
         } catch (deleteError) {
           // Ignore errors when deleting non-existent keys
           console.log('No secure Google CX to delete or deletion failed:', deleteError.message);
+        }
+      }
+      
+      // Save SerpAPI key securely to SecureStore
+      if (serpApiKey) {
+        await SecureStore.setItemAsync(STORAGE_KEYS.SECURE_SERP_API_KEY, serpApiKey);
+      } else {
+        try {
+          await SecureStore.deleteItemAsync(STORAGE_KEYS.SECURE_SERP_API_KEY);
+        } catch (deleteError) {
+          console.log('No secure SerpAPI key to delete or deletion failed:', deleteError.message);
         }
       }
       

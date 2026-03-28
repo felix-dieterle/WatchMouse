@@ -24,6 +24,7 @@ describe('Settings Component', () => {
       openrouterApiKey: 'test-key',
       ebayEnabled: true,
       kleinanzeigenEnabled: true,
+      primarySearchEngine: 'ebay_api',
     });
     
     // Mock SearchService instance methods
@@ -33,6 +34,18 @@ describe('Settings Component', () => {
         limit: 5000,
         remaining: 4900,
         usagePercent: 0.02,
+      }),
+      getGoogleRateLimitStats: jest.fn().mockResolvedValue({
+        count: 10,
+        limit: 100,
+        remaining: 90,
+        usagePercent: 0.1,
+      }),
+      getSerpApiRateLimitStats: jest.fn().mockResolvedValue({
+        count: 5,
+        limit: 100,
+        remaining: 95,
+        usagePercent: 0.05,
       }),
     }));
     
@@ -57,12 +70,13 @@ describe('Settings Component', () => {
   }, 15000);
 
   test('should display rate limit indicators', async () => {
-    const { getByText } = render(
+    const { getAllByText, getByText } = render(
       <Settings onClose={mockOnClose} onSettingsChange={mockOnSettingsChange} />
     );
 
     await waitFor(() => {
-      expect(getByText('eBay API')).toBeTruthy();
+      // 'eBay API' appears in both the engine selector and rate limit section
+      expect(getAllByText('eBay API').length).toBeGreaterThanOrEqual(1);
       expect(getByText('OpenRouter AI')).toBeTruthy();
     }, { timeout: 10000 });
   }, 15000);

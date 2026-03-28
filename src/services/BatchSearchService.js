@@ -42,6 +42,9 @@ export class BatchSearchService {
       googleApiKey: this.settings.googleApiKey,
       googleCx: this.settings.googleCx,
       useGoogleForEbay: this.settings.useGoogleForEbay,
+      serpApiKey: this.settings.serpApiKey,
+      primarySearchEngine: this.settings.primarySearchEngine,
+      usedCarsEnabled: this.settings.usedCarsEnabled,
     });
 
     this.aiService = new AIService(this.settings.openrouterApiKey);

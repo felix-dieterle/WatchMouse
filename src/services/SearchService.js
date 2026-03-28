@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS, CACHE_CONFIG } from '../constants';
+import { API_CONFIG, PERFORMANCE_CONFIG, PLATFORMS, CACHE_CONFIG, SEARCH_ENGINE_OPTIONS } from '../constants';
 import { redactSensitiveData } from '../utils/security';
 import { Cache } from '../utils/performance';
-import { EbayRateLimiter, GoogleRateLimiter } from '../utils/rateLimiter';
+import { EbayRateLimiter, GoogleRateLimiter, SerpApiRateLimiter } from '../utils/rateLimiter';
 import { 
   QueryOptimizer, 
   AIModeOptimizer, 
@@ -15,6 +15,7 @@ const searchCache = new Cache(CACHE_CONFIG.MAX_CACHE_SIZE);
 // Initialize rate limiters
 const ebayRateLimiter = new EbayRateLimiter();
 const googleRateLimiter = new GoogleRateLimiter();
+const serpApiRateLimiter = new SerpApiRateLimiter();
 
 /**
  * Service for searching across multiple shopping platforms
@@ -28,6 +29,7 @@ export class SearchService {
       kleinanzeigenEnabled: platformSettings.kleinanzeigenEnabled !== undefined ? platformSettings.kleinanzeigenEnabled : true,
       useGoogleForEbay: platformSettings.useGoogleForEbay === true,
       usedCarsEnabled: platformSettings.usedCarsEnabled === true,
+      primarySearchEngine: platformSettings.primarySearchEngine || SEARCH_ENGINE_OPTIONS.EBAY_API,
     };
     
     // AI mode affects search optimization strategy
@@ -40,15 +42,21 @@ export class SearchService {
         platformSettings.ebayApiKey,
         platformSettings.googleApiKey,
         platformSettings.googleCx,
-        this.platformSettings.useGoogleForEbay
+        this.platformSettings.useGoogleForEbay,
+        platformSettings.serpApiKey,
+        this.platformSettings.primarySearchEngine
       ),
       kleinanzeigen: new KleinanzeigenSearcher(
         platformSettings.googleApiKey,
         platformSettings.googleCx,
+        platformSettings.serpApiKey,
+        this.platformSettings.primarySearchEngine
       ),
       usedCars: new UsedCarSearcher(
         platformSettings.googleApiKey,
-        platformSettings.googleCx
+        platformSettings.googleCx,
+        platformSettings.serpApiKey,
+        this.platformSettings.primarySearchEngine
       ),
     };
   }
@@ -84,6 +92,14 @@ export class SearchService {
    */
   async getGoogleRateLimitStats() {
     return await googleRateLimiter.getStats();
+  }
+
+  /**
+   * Get SerpAPI rate limit statistics
+   * @returns {Promise<Object>} Rate limit stats
+   */
+  async getSerpApiRateLimitStats() {
+    return await serpApiRateLimiter.getStats();
   }
 
   /**
@@ -144,7 +160,7 @@ export class SearchService {
  * Searches eBay using the Finding API with caching support
  */
 class EbaySearcher {
-  constructor(aiModeEnabled = false, apiKey = '', googleApiKey = '', googleCx = '', useGoogleForEbay = false) {
+  constructor(aiModeEnabled = false, apiKey = '', googleApiKey = '', googleCx = '', useGoogleForEbay = false, serpApiKey = '', primarySearchEngine = SEARCH_ENGINE_OPTIONS.EBAY_API) {
     // Using eBay Finding API (requires API key for production)
     // Prioritize passed apiKey, fallback to environment variable
     this.apiKey = apiKey || process.env.EBAY_API_KEY || '';
@@ -156,6 +172,10 @@ class EbaySearcher {
     this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
     this.googleCx = googleCx || process.env.GOOGLE_CX || '';
     this.useGoogleForEbay = useGoogleForEbay;
+
+    // SerpAPI credentials
+    this.serpApiKey = serpApiKey || process.env.SERP_API_KEY || '';
+    this.primarySearchEngine = primarySearchEngine;
   }
 
   /**
@@ -189,7 +209,39 @@ class EbaySearcher {
       console.log('eBay: Returning cached results');
       return cached;
     }
+
+    // Route to the configured primary search engine
+    if (this.primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API) {
+      if (this.serpApiKey) {
+        try {
+          const results = await this.searchWithSerpAPI(query, maxPrice);
+          searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+          return results;
+        } catch (error) {
+          console.error('SerpAPI error:', redactSensitiveData(error.message || ''));
+          return [];
+        }
+      }
+      console.warn('eBay: SerpAPI key not configured. Please add it in Settings.');
+      return [];
+    }
+
+    if (this.primarySearchEngine === SEARCH_ENGINE_OPTIONS.GOOGLE_CSE) {
+      if (this.googleApiKey && this.googleCx) {
+        try {
+          const results = await this.searchWithGoogle(query, maxPrice);
+          searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+          return results;
+        } catch (error) {
+          console.error('Google CSE error:', redactSensitiveData(error.message || ''));
+          return [];
+        }
+      }
+      console.warn('eBay: Google Custom Search credentials not configured. Please add them in Settings.');
+      return [];
+    }
     
+    // Primary = eBay API (default behavior)
     // Priority 1: Try eBay API if key is available
     if (this.apiKey) {
       // Check rate limits before making API call
@@ -357,6 +409,7 @@ class EbaySearcher {
           price: price,
           currency: currency,
           platform: PLATFORMS.EBAY,
+          searchEngine: 'eBay API',
           url: url,
           condition: condition,
           location: location,
@@ -477,6 +530,7 @@ class EbaySearcher {
             price: price,
             currency: 'EUR',
             platform: PLATFORMS.GOOGLE_EBAY,
+            searchEngine: 'Google Custom Search',
             url: item.link || '',
             condition: '',
             location: '',
@@ -502,6 +556,116 @@ class EbaySearcher {
     }
   }
 
+  /**
+   * Search eBay.de using SerpAPI (Google search results for site:ebay.de)
+   * @param {string} query - Search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Promise<Array>} Array of search results
+   */
+  async searchWithSerpAPI(query, maxPrice) {
+    if (!query || query.trim() === '') {
+      console.log('SerpAPI (eBay): Empty query, skipping API call');
+      return [];
+    }
+
+    // Check rate limits before making API call
+    const limitCheck = await serpApiRateLimiter.checkLimit();
+    if (limitCheck.warning) {
+      if (limitCheck.level === 'critical') {
+        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+      } else if (limitCheck.level === 'warning') {
+        console.warn(`⚠️ ${limitCheck.warning}`);
+      }
+    }
+    if (!limitCheck.canProceed) {
+      console.error(`❌ ${limitCheck.warning}`);
+      return [];
+    }
+
+    try {
+      const params = {
+        engine: 'google',
+        q: `site:ebay.de ${query}`,
+        api_key: this.serpApiKey,
+        num: API_CONFIG.SERP_API.RESULTS_PER_PAGE,
+      };
+
+      const queryString = new URLSearchParams(params).toString();
+      const url = `${API_CONFIG.SERP_API.BASE_URL}?${queryString}`;
+
+      console.log(`SerpAPI (eBay): Searching for "${query}" on eBay.de`);
+
+      const response = await axios.get(url, {
+        timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+      });
+
+      await serpApiRateLimiter.incrementCount();
+
+      return this.parseSerpAPIResponse(response.data, query, maxPrice);
+    } catch (error) {
+      console.error('SerpAPI (eBay) error:', redactSensitiveData(error.message || ''));
+      throw error;
+    }
+  }
+
+  /**
+   * Parse SerpAPI response for eBay results
+   * @param {Object} data - SerpAPI response data
+   * @param {string} query - Original search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Array} Array of standardized search results
+   */
+  parseSerpAPIResponse(data, query, maxPrice) {
+    try {
+      const items = data.organic_results;
+      if (!items || items.length === 0) {
+        console.log('SerpAPI (eBay): No items found in response');
+        return [];
+      }
+
+      console.log(`SerpAPI (eBay): Found ${items.length} items for query "${query}"`);
+
+      const batchTimestamp = Date.now();
+
+      return items
+        .map(item => {
+          const urlMatch = item.link?.match(/\/itm\/(\d+)/);
+          const itemId = urlMatch ? urlMatch[1] : '';
+
+          const title = item.title || 'No title';
+          const snippet = item.snippet || '';
+
+          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*(\d+[.,]\d{2})|(\d+[.,]\d{2})\s*(?:EUR|€)/);
+          let price = 0;
+          if (priceMatch) {
+            const priceStr = (priceMatch[1] || priceMatch[2]).replace(',', '.');
+            price = parseFloat(priceStr);
+          }
+
+          return {
+            id: `${PLATFORMS.SERP_EBAY}-${itemId || batchTimestamp}-${Math.random().toString(36).slice(2, 11)}`,
+            title: title,
+            price: price,
+            currency: 'EUR',
+            platform: PLATFORMS.SERP_EBAY,
+            searchEngine: 'SerpAPI',
+            url: item.link || '',
+            condition: '',
+            location: '',
+            timestamp: new Date(batchTimestamp).toISOString(),
+            snippet: snippet,
+          };
+        })
+        .filter(item => {
+          if (!maxPrice) { return true; }
+          if (item.price === 0) { return true; }
+          return item.price <= maxPrice;
+        });
+    } catch (error) {
+      console.error('Error parsing SerpAPI response:', redactSensitiveData(error.message || String(error)));
+      return [];
+    }
+  }
 
 }
 
@@ -514,10 +678,14 @@ class KleinanzeigenSearcher {
   /**
    * @param {string} [googleApiKey=''] - Google Custom Search API key
    * @param {string} [googleCx=''] - Google Custom Search Engine ID
+   * @param {string} [serpApiKey=''] - SerpAPI API key
+   * @param {string} [primarySearchEngine='ebay_api'] - Primary search engine setting
    */
-  constructor(googleApiKey = '', googleCx = '') {
+  constructor(googleApiKey = '', googleCx = '', serpApiKey = '', primarySearchEngine = SEARCH_ENGINE_OPTIONS.EBAY_API) {
     this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
     this.googleCx = googleCx || process.env.GOOGLE_CX || '';
+    this.serpApiKey = serpApiKey || process.env.SERP_API_KEY || '';
+    this.primarySearchEngine = primarySearchEngine;
   }
 
   /**
@@ -527,11 +695,6 @@ class KleinanzeigenSearcher {
    * @returns {Promise<Array>} Array of standardized search results
    */
   async search(query, maxPrice) {
-    if (!this.googleApiKey || !this.googleCx) {
-      console.warn('Kleinanzeigen: Google API credentials not configured. Please add Google API Key and CX in settings.');
-      return [];
-    }
-
     // Validate query
     if (!query || query.trim() === '') {
       console.log('Kleinanzeigen: Empty query, skipping API call');
@@ -546,6 +709,28 @@ class KleinanzeigenSearcher {
     if (cached) {
       console.log('Kleinanzeigen: Returning cached results');
       return cached;
+    }
+
+    // Use SerpAPI if configured as primary
+    if (this.primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API) {
+      if (this.serpApiKey) {
+        try {
+          const results = await this.searchWithSerpAPI(query, maxPrice);
+          searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+          return results;
+        } catch (error) {
+          console.error('Kleinanzeigen SerpAPI error:', redactSensitiveData(error.message || ''));
+          return [];
+        }
+      }
+      console.warn('Kleinanzeigen: SerpAPI key not configured. Please add it in Settings.');
+      return [];
+    }
+
+    // Default: use Google Custom Search
+    if (!this.googleApiKey || !this.googleCx) {
+      console.warn('Kleinanzeigen: Google API credentials not configured. Please add Google API Key and CX in settings.');
+      return [];
     }
 
     // Check rate limits before making API call
@@ -591,6 +776,111 @@ class KleinanzeigenSearcher {
       return results;
     } catch (error) {
       console.error('Kleinanzeigen search error:', redactSensitiveData(error.message || ''));
+      return [];
+    }
+  }
+
+  /**
+   * Search kleinanzeigen.de using SerpAPI
+   * @param {string} query - Search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Promise<Array>} Array of search results
+   */
+  async searchWithSerpAPI(query, maxPrice) {
+    // Check rate limits before making API call
+    const limitCheck = await serpApiRateLimiter.checkLimit();
+    if (limitCheck.warning) {
+      if (limitCheck.level === 'critical') {
+        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+      } else if (limitCheck.level === 'warning') {
+        console.warn(`⚠️ ${limitCheck.warning}`);
+      }
+    }
+    if (!limitCheck.canProceed) {
+      console.error(`❌ ${limitCheck.warning}`);
+      return [];
+    }
+
+    const params = {
+      engine: 'google',
+      q: `site:kleinanzeigen.de ${query}`,
+      api_key: this.serpApiKey,
+      num: API_CONFIG.SERP_API.RESULTS_PER_PAGE,
+    };
+
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${API_CONFIG.SERP_API.BASE_URL}?${queryString}`;
+
+    console.log(`Kleinanzeigen (SerpAPI): Searching for "${query}"`);
+
+    const response = await axios.get(url, {
+      timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+    });
+
+    await serpApiRateLimiter.incrementCount();
+
+    return this.parseSerpAPIResponse(response.data, query, maxPrice);
+  }
+
+  /**
+   * Parse SerpAPI response for Kleinanzeigen results
+   * @param {Object} data - SerpAPI response data
+   * @param {string} query - Original search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Array} Array of standardized search results
+   */
+  parseSerpAPIResponse(data, query, maxPrice) {
+    try {
+      const items = data.organic_results;
+      if (!items || items.length === 0) {
+        console.log('Kleinanzeigen (SerpAPI): No items found in response');
+        return [];
+      }
+
+      console.log(`Kleinanzeigen (SerpAPI): Found ${items.length} items for query "${query}"`);
+
+      const batchTimestamp = Date.now();
+
+      return items
+        .map(item => {
+          const urlMatch = item.link?.match(/\/(\d+)(?:-\d+-\d+)?(?:$|\/)/);
+          const itemId = urlMatch ? urlMatch[1] : '';
+
+          const title = item.title || 'No title';
+          const snippet = item.snippet || '';
+
+          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*(\d[\d.,]*)/i) ||
+                             snippet.match(/(\d[\d.,]*)\s*(?:EUR|€)/i);
+          let price = 0;
+          if (priceMatch) {
+            const priceStr = priceMatch[1]
+              .replace(/,[-\s]?$/, '')
+              .replace(/\./g, '')
+              .replace(',', '.');
+            price = parseFloat(priceStr);
+          }
+
+          return {
+            id: `${PLATFORMS.SERP_KLEINANZEIGEN}-${itemId || batchTimestamp}-${Math.random().toString(36).slice(2, 11)}`,
+            title: title,
+            price: price,
+            currency: 'EUR',
+            platform: PLATFORMS.SERP_KLEINANZEIGEN,
+            searchEngine: 'SerpAPI',
+            url: item.link || '',
+            condition: '',
+            location: '',
+            timestamp: new Date(batchTimestamp).toISOString(),
+            snippet: snippet,
+          };
+        })
+        .filter(item => {
+          if (!maxPrice) { return true; }
+          if (item.price === 0) { return true; }
+          return item.price <= maxPrice;
+        });
+    } catch (error) {
+      console.error('Error parsing Kleinanzeigen SerpAPI response:', redactSensitiveData(error.message || String(error)));
       return [];
     }
   }
@@ -643,6 +933,7 @@ class KleinanzeigenSearcher {
             price: price,
             currency: 'EUR',
             platform: PLATFORMS.KLEINANZEIGEN,
+            searchEngine: 'Google Custom Search',
             url: item.link || '',
             condition: '',
             location: '',
@@ -679,10 +970,14 @@ class UsedCarSearcher {
    * Create a UsedCarSearcher instance
    * @param {string} [googleApiKey=''] - Google Custom Search API key
    * @param {string} [googleCx=''] - Google Custom Search Engine ID
+   * @param {string} [serpApiKey=''] - SerpAPI API key
+   * @param {string} [primarySearchEngine='ebay_api'] - Primary search engine setting
    */
-  constructor(googleApiKey = '', googleCx = '') {
+  constructor(googleApiKey = '', googleCx = '', serpApiKey = '', primarySearchEngine = SEARCH_ENGINE_OPTIONS.EBAY_API) {
     this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
     this.googleCx = googleCx || process.env.GOOGLE_CX || '';
+    this.serpApiKey = serpApiKey || process.env.SERP_API_KEY || '';
+    this.primarySearchEngine = primarySearchEngine;
   }
 
   /**
@@ -692,7 +987,45 @@ class UsedCarSearcher {
    * @returns {Promise<Array>} Array of standardized search results from mobile.de and AutoScout24
    */
   async search(query, maxPrice) {
-    // Validate Google API credentials
+    // Generate cache key
+    const cacheKey = `usedcars:${query}:${maxPrice || 'no-max'}`;
+
+    // Check cache first
+    const cached = searchCache.get(cacheKey);
+    if (cached) {
+      console.log('Used Cars: Returning cached results');
+      return cached;
+    }
+
+    // Use SerpAPI if configured as primary
+    if (this.primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API) {
+      if (this.serpApiKey) {
+        try {
+          const [mobileResults, autoScoutResults] = await Promise.allSettled([
+            this.searchPlatformWithSerpAPI(query, maxPrice, PLATFORMS.MOBILE_DE, 'mobile.de'),
+            this.searchPlatformWithSerpAPI(query, maxPrice, PLATFORMS.AUTOSCOUT24, 'autoscout24.de'),
+          ]);
+
+          const results = [];
+          if (mobileResults.status === 'fulfilled') {
+            results.push(...mobileResults.value);
+          }
+          if (autoScoutResults.status === 'fulfilled') {
+            results.push(...autoScoutResults.value);
+          }
+
+          searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
+          return results;
+        } catch (error) {
+          console.error('Used Cars SerpAPI error:', redactSensitiveData(error.message || ''));
+          return [];
+        }
+      }
+      console.warn('Used Cars: SerpAPI key not configured. Please add it in Settings.');
+      return [];
+    }
+
+    // Default: use Google Custom Search
     if (!this.googleApiKey || !this.googleCx) {
       console.warn('Used Cars: Google API credentials not configured. Please add API key and CX in settings.');
       return [];
@@ -714,16 +1047,6 @@ class UsedCarSearcher {
     if (!limitCheck.canProceed) {
       console.error(`❌ ${limitCheck.warning}`);
       return [];
-    }
-
-    // Generate cache key
-    const cacheKey = `usedcars:${query}:${maxPrice || 'no-max'}`;
-    
-    // Check cache first
-    const cached = searchCache.get(cacheKey);
-    if (cached) {
-      console.log('Used Cars: Returning cached results');
-      return cached;
     }
 
     try {
@@ -757,6 +1080,57 @@ class UsedCarSearcher {
       console.error('Used Cars search error:', redactSensitiveData(error.message || ''));
       return [];
     }
+  }
+
+  /**
+   * Search a specific used car platform using SerpAPI
+   * @param {string} query - Search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @param {string} platformName - Platform name for result metadata
+   * @param {string} siteDomain - Domain for site: operator (e.g. 'mobile.de')
+   * @returns {Promise<Array>} Array of search results
+   */
+  async searchPlatformWithSerpAPI(query, maxPrice, platformName, siteDomain) {
+    if (!query || query.trim() === '') {
+      console.log(`${platformName}: Empty query, skipping SerpAPI call`);
+      return [];
+    }
+
+    // Check rate limits before making API call
+    const limitCheck = await serpApiRateLimiter.checkLimit();
+    if (limitCheck.warning) {
+      if (limitCheck.level === 'critical') {
+        console.warn(`⚠️ CRITICAL: ${limitCheck.warning}`);
+      } else if (limitCheck.level === 'warning') {
+        console.warn(`⚠️ ${limitCheck.warning}`);
+      }
+    }
+    if (!limitCheck.canProceed) {
+      console.error(`❌ ${limitCheck.warning}`);
+      return [];
+    }
+
+    const params = {
+      engine: 'google',
+      q: `site:${siteDomain} ${query}`,
+      api_key: this.serpApiKey,
+      num: API_CONFIG.SERP_API.RESULTS_PER_PAGE,
+    };
+
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${API_CONFIG.SERP_API.BASE_URL}?${queryString}`;
+
+    console.log(`${platformName} (SerpAPI): Searching for "${query}"`);
+
+    const response = await axios.get(url, {
+      timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+    });
+
+    await serpApiRateLimiter.incrementCount();
+
+    return this.parseGoogleResponse(response.data.organic_results
+      ? { items: response.data.organic_results }
+      : response.data, query, maxPrice, platformName, 'SerpAPI');
   }
 
   /**
@@ -813,9 +1187,10 @@ class UsedCarSearcher {
    * @param {string} query - Original search query
    * @param {number|null} maxPrice - Maximum price filter
    * @param {string} platformName - Platform name for result metadata
+   * @param {string} [searchEngineName='Google Custom Search'] - Search engine used
    * @returns {Array} Array of standardized search results
    */
-  parseGoogleResponse(data, query, maxPrice, platformName) {
+  parseGoogleResponse(data, query, maxPrice, platformName, searchEngineName = 'Google Custom Search') {
     try {
       if (!data.items || data.items.length === 0) {
         console.log(`${platformName}: No items found in response`);
@@ -864,6 +1239,7 @@ class UsedCarSearcher {
             price: price,
             currency: 'EUR',
             platform: platformName,
+            searchEngine: searchEngineName,
             url: item.link || '',
             year: year,
             mileage: mileage,

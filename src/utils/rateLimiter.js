@@ -219,3 +219,19 @@ export class GoogleRateLimiter extends BaseRateLimiter {
     );
   }
 }
+
+/**
+ * SerpAPI Rate Limiter
+ * Tracks daily API calls and warns when approaching limits
+ */
+export class SerpApiRateLimiter extends BaseRateLimiter {
+  constructor() {
+    super(
+      STORAGE_KEYS.SERP_API_RATE_LIMIT,
+      API_CONFIG.SERP_API.DAILY_RATE_LIMIT,
+      API_CONFIG.SERP_API.WARNING_THRESHOLD,
+      API_CONFIG.SERP_API.CRITICAL_THRESHOLD,
+      'SerpAPI'
+    );
+  }
+}

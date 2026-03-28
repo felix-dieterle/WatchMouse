@@ -14,6 +14,10 @@ jest.mock('../../utils/rateLimiter', () => ({
     checkLimit: jest.fn().mockResolvedValue({ canProceed: true, warning: null }),
     incrementCount: jest.fn().mockResolvedValue(undefined),
   })),
+  SerpApiRateLimiter: jest.fn().mockImplementation(() => ({
+    checkLimit: jest.fn().mockResolvedValue({ canProceed: true, warning: null }),
+    incrementCount: jest.fn().mockResolvedValue(undefined),
+  })),
 }));
 
 // Mock performance cache
