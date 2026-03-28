@@ -27,6 +27,7 @@ import {
   DEFAULT_SETTINGS,
   APP_VERSION,
   BUILD_NUMBER,
+  SEARCH_ENGINE_OPTIONS,
 } from './src/constants';
 
 /**
@@ -342,6 +343,18 @@ function AppContent() {
     return true;
   }, [settings, setShowSettings]);
 
+  /**
+   * Get human-readable name for the currently configured primary search engine
+   * @returns {string} Human-readable search engine name
+   */
+  const getSearchEngineName = useCallback(() => {
+    switch (settings.primarySearchEngine) {
+      case SEARCH_ENGINE_OPTIONS.GOOGLE_CSE: return 'Google Custom Search';
+      case SEARCH_ENGINE_OPTIONS.SERP_API: return 'SerpAPI';
+      default: return 'eBay API';
+    }
+  }, [settings.primarySearchEngine]);
+
   // Run all saved searches in batch
   const runAllSearches = useCallback(async () => {
     if (searches.length === 0) {
@@ -377,7 +390,8 @@ function AppContent() {
         `Successful: ${result.stats.successful}\n` +
         `Failed: ${result.stats.failed}\n` +
         `API calls saved: ${result.stats.apiCallsSaved}\n\n` +
-        `Mode: ${aiEnabled ? 'AI-powered' : 'Keyword matching'}`;
+        `Mode: ${aiEnabled ? 'AI-powered' : 'Keyword matching'}\n` +
+        `Search engine: ${getSearchEngineName()}`;
       
       Alert.alert('Batch Search Complete', message);
     } catch (error) {
@@ -386,7 +400,7 @@ function AppContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [searches, settings, matches, saveMatches, validateApiKeys]);
+  }, [searches, settings, matches, saveMatches, validateApiKeys, getSearchEngineName]);
 
   // Run search for a specific query
   const runSearch = useCallback(async (search) => {
@@ -411,14 +425,17 @@ function AppContent() {
       const aiService = new AIService(settings.openrouterApiKey);
       const aiEnabled = aiService.hasValidApiKey();
       
-      Alert.alert('Success', SUCCESS_MESSAGES.SEARCH_COMPLETE(newMatches.length, aiEnabled));
+      const baseMsg = SUCCESS_MESSAGES.SEARCH_COMPLETE(newMatches.length, aiEnabled);
+      const message = `${baseMsg}\n` +
+        `Search engine: ${getSearchEngineName()}`;
+      Alert.alert('Success', message);
     } catch (error) {
       console.error('Error running search:', error);
       Alert.alert('Error', ERROR_MESSAGES.SEARCH_FAILED);
     } finally {
       setIsLoading(false);
     }
-  }, [settings, matches, saveMatches, validateApiKeys]);
+  }, [settings, matches, saveMatches, validateApiKeys, getSearchEngineName]);
 
   // Render item for search list - memoized
   const renderSearchItem = useCallback(({ item }) => (
