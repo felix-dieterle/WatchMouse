@@ -22,6 +22,7 @@ export default function Settings({ onClose, onSettingsChange }) {
   const [ebayEnabled, setEbayEnabled] = useState(true);
   const [kleinanzeigenEnabled, setKleinanzeigenEnabled] = useState(true);
   const [useGoogleForEbay, setUseGoogleForEbay] = useState(false);
+  const [useSerpApi, setUseSerpApi] = useState(false);
   const [usedCarsEnabled, setUsedCarsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -76,6 +77,7 @@ export default function Settings({ onClose, onSettingsChange }) {
       setEbayEnabled(settings.ebayEnabled !== undefined ? settings.ebayEnabled : true);
       setKleinanzeigenEnabled(settings.kleinanzeigenEnabled !== undefined ? settings.kleinanzeigenEnabled : true);
       setUseGoogleForEbay(settings.useGoogleForEbay === true);
+      setUseSerpApi(settings.useSerpApi === true);
       setUsedCarsEnabled(settings.usedCarsEnabled === true);
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -94,6 +96,7 @@ export default function Settings({ onClose, onSettingsChange }) {
         ebayEnabled,
         kleinanzeigenEnabled,
         useGoogleForEbay,
+        useSerpApi,
         usedCarsEnabled,
       };
       

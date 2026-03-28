@@ -72,6 +72,13 @@ export const API_CONFIG = {
     WARNING_THRESHOLD: 0.7, // Warn at 70% usage (70 queries)
     CRITICAL_THRESHOLD: 0.99, // Critical warning at 99% usage (99 queries)
   },
+  SERPAPI: {
+    BASE_URL: 'https://serpapi.com/search',
+    RESULTS_PER_PAGE: 10,
+    MONTHLY_RATE_LIMIT: 250, // Free plan: 250 searches per month
+    WARNING_THRESHOLD: 0.7, // Warn at 70% usage (175 searches)
+    CRITICAL_THRESHOLD: 0.99, // Critical at 99% usage (247 searches)
+  },
   USED_CARS: {
     // Used car platforms use Google Custom Search
     MOBILE_DE_URL: 'https://www.mobile.de',

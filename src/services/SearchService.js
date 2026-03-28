@@ -45,6 +45,7 @@ export class SearchService {
       kleinanzeigen: new KleinanzeigenSearcher(
         platformSettings.googleApiKey,
         platformSettings.googleCx,
+        platformSettings.useSerpApi === true,
       ),
       usedCars: new UsedCarSearcher(
         platformSettings.googleApiKey,
@@ -507,17 +508,19 @@ class EbaySearcher {
 
 /**
  * Kleinanzeigen platform searcher
- * Searches kleinanzeigen.de via Google Custom Search API using the site: operator.
- * Requires Google API key and Custom Search Engine ID to be configured.
+ * Searches kleinanzeigen.de via SerpAPI (or Google Custom Search API) using the site: operator.
+ * Requires SerpAPI or Google API key to be configured.
  */
 class KleinanzeigenSearcher {
   /**
-   * @param {string} [googleApiKey=''] - Google Custom Search API key
-   * @param {string} [googleCx=''] - Google Custom Search Engine ID
+   * @param {string} [googleApiKey=''] - SerpAPI or Google Custom Search API key
+   * @param {string} [googleCx=''] - Google Custom Search Engine ID (only for Google CSE, not needed for SerpAPI)
+   * @param {boolean} [useSerpApi=false] - Use SerpAPI instead of Google Custom Search
    */
-  constructor(googleApiKey = '', googleCx = '') {
-    this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || '';
+  constructor(googleApiKey = '', googleCx = '', useSerpApi = false) {
+    this.googleApiKey = googleApiKey || process.env.GOOGLE_API_KEY || process.env.SERPAPI_KEY || '';
     this.googleCx = googleCx || process.env.GOOGLE_CX || '';
+    this.useSerpApi = useSerpApi;
   }
 
   /**
@@ -527,7 +530,14 @@ class KleinanzeigenSearcher {
    * @returns {Promise<Array>} Array of standardized search results
    */
   async search(query, maxPrice) {
-    if (!this.googleApiKey || !this.googleCx) {
+    if (!this.googleApiKey) {
+      console.warn('Kleinanzeigen: API credentials not configured. Please add SerpAPI or Google API Key in settings.');
+      return [];
+    }
+
+    if (this.useSerpApi && !this.googleCx) {
+      console.log('Kleinanzeigen: Using SerpAPI (CX not required)');
+    } else if (!this.useSerpApi && (!this.googleApiKey || !this.googleCx)) {
       console.warn('Kleinanzeigen: Google API credentials not configured. Please add Google API Key and CX in settings.');
       return [];
     }
@@ -565,32 +575,114 @@ class KleinanzeigenSearcher {
     }
 
     try {
-      // Search specifically on kleinanzeigen.de using site: operator
-      const searchQuery = `site:kleinanzeigen.de ${query}`;
-      const params = {
-        key: this.googleApiKey,
-        cx: this.googleCx,
-        q: searchQuery,
-        num: API_CONFIG.GOOGLE_CUSTOM_SEARCH.RESULTS_PER_PAGE,
-      };
+      let results;
+      
+      if (this.useSerpApi) {
+        // Use SerpAPI
+        const searchQuery = `${query} site:kleinanzeigen.de`;
+        const params = {
+          api_key: this.googleApiKey,
+          q: searchQuery,
+          num: API_CONFIG.SERPAPI.RESULTS_PER_PAGE,
+          gl: 'de',
+          hl: 'de',
+          engine: 'google'
+        };
 
-      const queryString = new URLSearchParams(params).toString();
-      const url = `${API_CONFIG.GOOGLE_CUSTOM_SEARCH.BASE_URL}?${queryString}`;
+        const queryString = new URLSearchParams(params).toString();
+        const url = `${API_CONFIG.SERPAPI.BASE_URL}?${queryString}`;
 
-      console.log(`Kleinanzeigen: Searching for "${query}" on kleinanzeigen.de`);
+        console.log(`Kleinanzeigen: Searching for "${query}" on kleinanzeigen.de via SerpAPI`);
 
-      const response = await axios.get(url, {
-        timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
-      });
+        const response = await axios.get(url, {
+          timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+        });
 
-      // Increment rate limit counter after successful HTTP request
-      await googleRateLimiter.incrementCount();
+        await googleRateLimiter.incrementCount();
+        results = this.parseSerpApiResponse(response.data, query, maxPrice);
+      } else {
+        // Use Google Custom Search API
+        const searchQuery = `site:kleinanzeigen.de ${query}`;
+        const params = {
+          key: this.googleApiKey,
+          cx: this.googleCx,
+          q: searchQuery,
+          num: API_CONFIG.GOOGLE_CUSTOM_SEARCH.RESULTS_PER_PAGE,
+        };
 
-      const results = this.parseGoogleResponse(response.data, query, maxPrice);
+        const queryString = new URLSearchParams(params).toString();
+        const url = `${API_CONFIG.GOOGLE_CUSTOM_SEARCH.BASE_URL}?${queryString}`;
+
+        console.log(`Kleinanzeigen: Searching for "${query}" on kleinanzeigen.de via Google CSE`);
+
+        const response = await axios.get(url, {
+          timeout: PERFORMANCE_CONFIG.API_TIMEOUT,
+        });
+
+        await googleRateLimiter.incrementCount();
+        results = this.parseGoogleResponse(response.data, query, maxPrice);
+      }
+
       searchCache.set(cacheKey, results, CACHE_CONFIG.SEARCH_RESULTS_TTL);
       return results;
     } catch (error) {
       console.error('Kleinanzeigen search error:', redactSensitiveData(error.message || ''));
+      return [];
+    }
+  }
+
+  /**
+   * Parse SerpAPI response for kleinanzeigen.de results
+   * @param {Object} data - SerpAPI response data
+   * @param {string} query - Original search query
+   * @param {number|null} maxPrice - Maximum price filter
+   * @returns {Array} Array of standardized search results
+   */
+  parseSerpApiResponse(data, query, maxPrice) {
+    try {
+      if (!data.organic_results || data.organic_results.length === 0) {
+        console.log('Kleinanzeigen: No items found in SerpAPI response');
+        return [];
+      }
+
+      console.log(`Kleinanzeigen: Found ${data.organic_results.length} items for query "${query}" (SerpAPI)`);
+
+      const batchTimestamp = Date.now();
+
+      return data.organic_results
+        .map(item => {
+          const urlMatch = item.link?.match(/\/(\d+)(?:-\d+-\d+)?(?:$|\/)/);
+          const itemId = urlMatch ? urlMatch[1] : '';
+
+          const title = item.title || 'No title';
+          const snippet = item.snippet || '';
+
+          const priceMatch = snippet.match(/(?:EUR|€|\$)\s*(\d[\d.,]*)/i) ||
+                             snippet.match(/(\d[\d.,]*)\s*(?:EUR|€)/i);
+          let price = 0;
+          if (priceMatch) {
+            const priceStr = priceMatch[1]
+              .replace(/,[-\s]?$/, '')
+              .replace(/\./g, '')
+              .replace(',', '.');
+            price = parseFloat(priceStr);
+          }
+
+          return {
+            id: `${PLATFORMS.KLEINANZEIGEN}-${itemId || batchTimestamp}-${Math.random().toString(36).slice(2, 11)}`,
+            title: title,
+            price: price,
+            currency: 'EUR',
+            platform: PLATFORMS.KLEINANZEIGEN,
+            url: item.link || '',
+            condition: '',
+            location: '',
+            timestamp: new Date(batchTimestamp).toISOString(),
+          };
+        })
+        .filter(item => maxPrice === null || item.price === 0 || item.price <= maxPrice);
+    } catch (error) {
+      console.error('Error parsing SerpAPI response:', redactSensitiveData(error.message || String(error)));
       return [];
     }
   }
