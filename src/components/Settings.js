@@ -409,8 +409,7 @@ export default function Settings({ onClose, onSettingsChange }) {
               ]}>
                 100/month free
               </Text>
-            </TouchableOpacity>
-          </View>
+            </TouchableOpacity>          </View>
 
           <Text style={styles.helperText}>
             {primarySearchEngine === SEARCH_ENGINE_OPTIONS.EBAY_API && '🔍 Using eBay Finding API as primary. Google CSE used as fallback.'}

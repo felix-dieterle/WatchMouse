@@ -88,7 +88,9 @@ export const API_CONFIG = {
   SERP_API: {
     BASE_URL: 'https://serpapi.com/search.json',
     RESULTS_PER_PAGE: 10,
-    DAILY_RATE_LIMIT: 100, // Varies by plan; free plan is 100/month
+    // Free plan: 100 searches/month (~3/day). Paid plans have much higher limits.
+    // This daily limit is a conservative estimate; adjust based on your SerpAPI plan.
+    DAILY_RATE_LIMIT: 3,
     WARNING_THRESHOLD: 0.7,
     CRITICAL_THRESHOLD: 0.99,
   },
