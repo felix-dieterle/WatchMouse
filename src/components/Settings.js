@@ -484,7 +484,7 @@ export default function Settings({ onClose, onSettingsChange }) {
         {/* API Rate Limits Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>API Rate Limits</Text>
-          <Text style={styles.helperText} style={{ marginBottom: 12 }}>
+          <Text style={[styles.helperText, { marginBottom: 12 }]}>
             Daily API usage tracking (resets at midnight)
           </Text>
           
