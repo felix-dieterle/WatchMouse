@@ -23,7 +23,8 @@ describe('SettingsService', () => {
         .mockResolvedValueOnce(mockOpenRouterApiKey)
         .mockResolvedValueOnce(mockEbayApiKey)
         .mockResolvedValueOnce(null) // googleApiKey
-        .mockResolvedValueOnce(null); // googleCx
+        .mockResolvedValueOnce(null) // googleCx
+        .mockResolvedValueOnce(null); // serpApiKey
       
       const settings = await SettingsService.loadSettings();
       
@@ -36,8 +37,10 @@ describe('SettingsService', () => {
         ebayApiKey: mockEbayApiKey,
         googleApiKey: '',
         googleCx: '',
+        serpApiKey: '',
         useGoogleForEbay: false,
         usedCarsEnabled: false,
+        primarySearchEngine: 'ebay_api',
       });
     });
 
@@ -52,10 +55,12 @@ describe('SettingsService', () => {
         ebayApiKey: '',
         googleApiKey: '',
         googleCx: '',
+        serpApiKey: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
         useGoogleForEbay: false,
         usedCarsEnabled: false,
+        primarySearchEngine: 'ebay_api',
       });
     });
 
@@ -70,10 +75,12 @@ describe('SettingsService', () => {
         ebayApiKey: '',
         googleApiKey: '',
         googleCx: '',
+        serpApiKey: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: true,
         useGoogleForEbay: false,
         usedCarsEnabled: false,
+        primarySearchEngine: 'ebay_api',
       });
     });
 
@@ -103,9 +110,11 @@ describe('SettingsService', () => {
         ebayApiKey: 'new-ebay-key',
         googleApiKey: 'new-google-key',
         googleCx: 'new-google-cx',
+        serpApiKey: 'new-serp-key',
         ebayEnabled: false,
         kleinanzeigenEnabled: true,
         useGoogleForEbay: true,
+        primarySearchEngine: 'google_cse',
       };
       
       AsyncStorage.setItem.mockResolvedValue();
@@ -119,6 +128,7 @@ describe('SettingsService', () => {
           ebayEnabled: false,
           kleinanzeigenEnabled: true,
           useGoogleForEbay: true,
+          primarySearchEngine: 'google_cse',
         })
       );
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
@@ -137,6 +147,10 @@ describe('SettingsService', () => {
         'secure_google_cx',
         'new-google-cx'
       );
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+        'secure_serp_api_key',
+        'new-serp-key'
+      );
       expect(result).toBe(true);
     });
 
@@ -146,9 +160,11 @@ describe('SettingsService', () => {
         ebayApiKey: '',
         googleApiKey: '',
         googleCx: '',
+        serpApiKey: '',
         ebayEnabled: true,
         kleinanzeigenEnabled: false,
         useGoogleForEbay: false,
+        primarySearchEngine: 'ebay_api',
       };
       
       AsyncStorage.setItem.mockResolvedValue();
@@ -160,6 +176,7 @@ describe('SettingsService', () => {
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_ebay_api_key');
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_google_api_key');
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_google_cx');
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('secure_serp_api_key');
       expect(result).toBe(true);
     });
 
@@ -171,6 +188,7 @@ describe('SettingsService', () => {
         ebayApiKey: 'ebay-key',
         googleApiKey: 'google-key',
         googleCx: 'google-cx',
+        serpApiKey: '',
       });
       
       expect(result).toBe(false);

@@ -456,6 +456,9 @@ function AppContent() {
         </Text>
         <Text style={styles.matchPrice}>€{item.price}</Text>
         <Text style={styles.matchPlatform}>{item.platform}</Text>
+        {item.searchEngine && (
+          <Text style={styles.matchSearchEngine}>🔍 via {item.searchEngine}</Text>
+        )}
         <Text style={styles.matchDate}>
           Found: {new Date(item.foundAt).toLocaleDateString()}
         </Text>
@@ -950,6 +953,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 4,
+  },
+  matchSearchEngine: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   matchDate: {
     fontSize: 12,

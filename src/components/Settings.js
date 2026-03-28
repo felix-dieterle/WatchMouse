@@ -13,21 +13,25 @@ import { SettingsService } from '../services/SettingsService';
 import { SearchService } from '../services/SearchService';
 import { AIService } from '../services/AIService';
 import RateLimitIndicator from './RateLimitIndicator';
+import { SEARCH_ENGINE_OPTIONS } from '../constants';
 
 export default function Settings({ onClose, onSettingsChange }) {
   const [apiKey, setApiKey] = useState('');
   const [ebayApiKey, setEbayApiKey] = useState('');
   const [googleApiKey, setGoogleApiKey] = useState('');
   const [googleCx, setGoogleCx] = useState('');
+  const [serpApiKey, setSerpApiKey] = useState('');
   const [ebayEnabled, setEbayEnabled] = useState(true);
   const [kleinanzeigenEnabled, setKleinanzeigenEnabled] = useState(true);
   const [useGoogleForEbay, setUseGoogleForEbay] = useState(false);
   const [usedCarsEnabled, setUsedCarsEnabled] = useState(false);
+  const [primarySearchEngine, setPrimarySearchEngine] = useState(SEARCH_ENGINE_OPTIONS.EBAY_API);
   const [isLoading, setIsLoading] = useState(true);
   
   // Rate limit states
   const [ebayRateLimit, setEbayRateLimit] = useState({ count: 0, limit: 5000, usagePercent: 0 });
   const [googleRateLimit, setGoogleRateLimit] = useState({ count: 0, limit: 100, usagePercent: 0 });
+  const [serpApiRateLimit, setSerpApiRateLimit] = useState({ count: 0, limit: 100, usagePercent: 0 });
   const [openRouterRateLimit, setOpenRouterRateLimit] = useState({ count: 0, limit: null, usagePercent: 0 });
 
   useEffect(() => {
@@ -54,6 +58,14 @@ export default function Settings({ onClose, onSettingsChange }) {
         usagePercent: googleStats.usagePercent,
       });
 
+      // Load SerpAPI rate limit stats
+      const serpStats = await searchService.getSerpApiRateLimitStats();
+      setSerpApiRateLimit({
+        count: serpStats.count,
+        limit: serpStats.limit,
+        usagePercent: serpStats.usagePercent,
+      });
+
       // Load OpenRouter rate limit stats
       const openRouterStats = await AIService.getOpenRouterRateLimitStats();
       setOpenRouterRateLimit({
@@ -73,10 +85,12 @@ export default function Settings({ onClose, onSettingsChange }) {
       setEbayApiKey(settings.ebayApiKey || '');
       setGoogleApiKey(settings.googleApiKey || '');
       setGoogleCx(settings.googleCx || '');
+      setSerpApiKey(settings.serpApiKey || '');
       setEbayEnabled(settings.ebayEnabled !== undefined ? settings.ebayEnabled : true);
       setKleinanzeigenEnabled(settings.kleinanzeigenEnabled !== undefined ? settings.kleinanzeigenEnabled : true);
       setUseGoogleForEbay(settings.useGoogleForEbay === true);
       setUsedCarsEnabled(settings.usedCarsEnabled === true);
+      setPrimarySearchEngine(settings.primarySearchEngine || SEARCH_ENGINE_OPTIONS.EBAY_API);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -91,10 +105,12 @@ export default function Settings({ onClose, onSettingsChange }) {
         ebayApiKey: ebayApiKey.trim(),
         googleApiKey: googleApiKey.trim(),
         googleCx: googleCx.trim(),
+        serpApiKey: serpApiKey.trim(),
         ebayEnabled,
         kleinanzeigenEnabled,
         useGoogleForEbay,
         usedCarsEnabled,
+        primarySearchEngine,
       };
       
       const success = await SettingsService.saveSettings(settings);
@@ -135,11 +151,11 @@ export default function Settings({ onClose, onSettingsChange }) {
   };
 
   const handleUsedCarsToggle = (value) => {
-    // Check if Google credentials are available when enabling
-    if (value && (!googleApiKey || !googleCx)) {
+    // Check if Google credentials or SerpAPI key are available when enabling
+    if (value && (!googleApiKey || !googleCx) && !serpApiKey) {
       Alert.alert(
-        'Google API Required',
-        'Used car search requires Google Custom Search API credentials. Please enter your Google API Key and Search Engine ID first.',
+        'Search API Required',
+        'Used car search requires either Google Custom Search API credentials or a SerpAPI key. Please configure them in Settings first.',
         [{ text: 'OK' }]
       );
       return;
@@ -295,6 +311,113 @@ export default function Settings({ onClose, onSettingsChange }) {
           </Text>
         </View>
 
+        {/* SerpAPI Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>SerpAPI</Text>
+          <Text style={[styles.helperText, { marginBottom: 12 }]}>
+            Alternative to Google Custom Search. Can be used as the primary search engine for all platforms.
+          </Text>
+
+          <Text style={styles.label}>SerpAPI Key</Text>
+          <TextInput
+            style={styles.input}
+            value={serpApiKey}
+            onChangeText={setSerpApiKey}
+            placeholder="Enter your SerpAPI key"
+            placeholderTextColor="#999"
+            secureTextEntry={true}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.helperText}>
+            Get your API key at: https://serpapi.com/
+          </Text>
+          <Text style={styles.helperText}>
+            {serpApiKey.trim() ? '✓ SerpAPI key configured' : '⚠ No SerpAPI key configured'}
+          </Text>
+        </View>
+
+        {/* Primary Search Engine Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Primary Search Engine</Text>
+          <Text style={[styles.helperText, { marginBottom: 12 }]}>
+            Choose which search engine to use as the primary source. This affects how results are found and will be shown in each result.
+          </Text>
+
+          <View style={styles.engineSelector}>
+            <TouchableOpacity
+              style={[
+                styles.engineOption,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.EBAY_API && styles.engineOptionActive,
+              ]}
+              onPress={() => setPrimarySearchEngine(SEARCH_ENGINE_OPTIONS.EBAY_API)}
+              accessibilityLabel="Select eBay API as primary search engine"
+            >
+              <Text style={[
+                styles.engineOptionText,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.EBAY_API && styles.engineOptionTextActive,
+              ]}>
+                eBay API
+              </Text>
+              <Text style={[
+                styles.engineOptionSubtext,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.EBAY_API && styles.engineOptionTextActive,
+              ]}>
+                Direct, 5000/day
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.engineOption,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.GOOGLE_CSE && styles.engineOptionActive,
+              ]}
+              onPress={() => setPrimarySearchEngine(SEARCH_ENGINE_OPTIONS.GOOGLE_CSE)}
+              accessibilityLabel="Select Google Custom Search as primary search engine"
+            >
+              <Text style={[
+                styles.engineOptionText,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.GOOGLE_CSE && styles.engineOptionTextActive,
+              ]}>
+                Google CSE
+              </Text>
+              <Text style={[
+                styles.engineOptionSubtext,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.GOOGLE_CSE && styles.engineOptionTextActive,
+              ]}>
+                100/day free
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.engineOption,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API && styles.engineOptionActive,
+              ]}
+              onPress={() => setPrimarySearchEngine(SEARCH_ENGINE_OPTIONS.SERP_API)}
+              accessibilityLabel="Select SerpAPI as primary search engine"
+            >
+              <Text style={[
+                styles.engineOptionText,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API && styles.engineOptionTextActive,
+              ]}>
+                SerpAPI
+              </Text>
+              <Text style={[
+                styles.engineOptionSubtext,
+                primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API && styles.engineOptionTextActive,
+              ]}>
+                100/month free
+              </Text>
+            </TouchableOpacity>          </View>
+
+          <Text style={styles.helperText}>
+            {primarySearchEngine === SEARCH_ENGINE_OPTIONS.EBAY_API && '🔍 Using eBay Finding API as primary. Google CSE used as fallback.'}
+            {primarySearchEngine === SEARCH_ENGINE_OPTIONS.GOOGLE_CSE && '🔍 Using Google Custom Search as primary. eBay API is bypassed.'}
+            {primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API && '🔍 Using SerpAPI as primary. eBay API and Google CSE are bypassed.'}
+          </Text>
+        </View>
+
         {/* Platform Modules Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Platform Modules</Text>
@@ -334,7 +457,7 @@ export default function Settings({ onClose, onSettingsChange }) {
           <View style={styles.switchContainer}>
             <View style={styles.switchLabel}>
               <Text style={styles.label}>Used Cars (mobile.de, AutoScout24)</Text>
-              <Text style={styles.helperText}>Search used car platforms via Google (requires Google API)</Text>
+              <Text style={styles.helperText}>Search used car platforms via Google CSE or SerpAPI</Text>
             </View>
             <Switch
               value={usedCarsEnabled}
@@ -343,11 +466,11 @@ export default function Settings({ onClose, onSettingsChange }) {
               thumbColor={usedCarsEnabled ? '#2196F3' : '#f4f3f4'}
               accessibilityLabel="Toggle Used Cars"
               accessibilityHint={
-                !googleApiKey || !googleCx
-                  ? 'Disabled. Google Custom Search API credentials required.'
+                (!googleApiKey || !googleCx) && !serpApiKey
+                  ? 'Disabled. Google Custom Search API credentials or SerpAPI key required.'
                   : 'Toggle used car search on mobile.de and AutoScout24'
               }
-              disabled={!googleApiKey || !googleCx}
+              disabled={(!googleApiKey || !googleCx) && !serpApiKey}
             />
           </View>
 
@@ -378,7 +501,15 @@ export default function Settings({ onClose, onSettingsChange }) {
             usagePercent={googleRateLimit.usagePercent}
             count={googleRateLimit.count}
             limit={googleRateLimit.limit}
-            enabled={(useGoogleForEbay || kleinanzeigenEnabled) && googleApiKey.trim() !== '' && googleCx.trim() !== ''}
+            enabled={(useGoogleForEbay || kleinanzeigenEnabled || primarySearchEngine === SEARCH_ENGINE_OPTIONS.GOOGLE_CSE) && googleApiKey.trim() !== '' && googleCx.trim() !== ''}
+          />
+
+          <RateLimitIndicator
+            apiName="SerpAPI"
+            usagePercent={serpApiRateLimit.usagePercent}
+            count={serpApiRateLimit.count}
+            limit={serpApiRateLimit.limit}
+            enabled={primarySearchEngine === SEARCH_ENGINE_OPTIONS.SERP_API && serpApiKey.trim() !== ''}
           />
           
           <RateLimitIndicator
@@ -522,5 +653,39 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  engineSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 12,
+    gap: 8,
+  },
+  engineOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  engineOptionActive: {
+    borderColor: '#2196F3',
+    backgroundColor: '#e3f2fd',
+  },
+  engineOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+    textAlign: 'center',
+  },
+  engineOptionSubtext: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  engineOptionTextActive: {
+    color: '#1976d2',
   },
 });

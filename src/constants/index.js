@@ -20,8 +20,19 @@ export const PLATFORMS = {
   EBAY: 'eBay',
   KLEINANZEIGEN: 'Kleinanzeigen',
   GOOGLE_EBAY: 'eBay (Google)',
+  SERP_EBAY: 'eBay (SerpAPI)',
+  SERP_KLEINANZEIGEN: 'Kleinanzeigen (SerpAPI)',
   MOBILE_DE: 'mobile.de',
   AUTOSCOUT24: 'AutoScout24',
+};
+
+/**
+ * Search engine options for the primary search engine setting
+ */
+export const SEARCH_ENGINE_OPTIONS = {
+  EBAY_API: 'ebay_api',
+  GOOGLE_CSE: 'google_cse',
+  SERP_API: 'serpapi',
 };
 
 /**
@@ -36,9 +47,11 @@ export const STORAGE_KEYS = {
   SECURE_EBAY_KEY: 'secure_ebay_api_key',
   SECURE_GOOGLE_API_KEY: 'secure_google_api_key',
   SECURE_GOOGLE_CX: 'secure_google_cx',
+  SECURE_SERP_API_KEY: 'secure_serp_api_key',
   EBAY_RATE_LIMIT: 'ebay_rate_limit_tracker',
   OPENROUTER_RATE_LIMIT: 'openrouter_rate_limit_tracker',
   GOOGLE_RATE_LIMIT: 'google_rate_limit_tracker',
+  SERP_API_RATE_LIMIT: 'serp_api_rate_limit_tracker',
 };
 
 /**
@@ -71,6 +84,15 @@ export const API_CONFIG = {
     DAILY_RATE_LIMIT: 100, // Free tier: 100 queries per day
     WARNING_THRESHOLD: 0.7, // Warn at 70% usage (70 queries)
     CRITICAL_THRESHOLD: 0.99, // Critical warning at 99% usage (99 queries)
+  },
+  SERP_API: {
+    BASE_URL: 'https://serpapi.com/search.json',
+    RESULTS_PER_PAGE: 10,
+    // Free plan: 100 searches/month (~3/day). Paid plans have much higher limits.
+    // This daily limit is a conservative estimate; adjust based on your SerpAPI plan.
+    DAILY_RATE_LIMIT: 3,
+    WARNING_THRESHOLD: 0.7,
+    CRITICAL_THRESHOLD: 0.99,
   },
   USED_CARS: {
     // Used car platforms use Google Custom Search
@@ -161,10 +183,12 @@ export const DEFAULT_SETTINGS = {
   ebayApiKey: '',
   googleApiKey: '',
   googleCx: '',
+  serpApiKey: '',
   ebayEnabled: true,
   kleinanzeigenEnabled: true,
   useGoogleForEbay: false, // Use Google Custom Search as eBay fallback
   usedCarsEnabled: false, // Enable used car search (requires Google Custom Search)
+  primarySearchEngine: 'ebay_api', // 'ebay_api' | 'google_cse' | 'serpapi'
 };
 
 /**
