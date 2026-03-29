@@ -442,7 +442,9 @@ export default function Settings({ onClose, onSettingsChange }) {
               <Text style={styles.helperText}>
                 {(googleApiKey.trim() && googleCx.trim())
                   ? '✓ Google API configured – searching kleinanzeigen.de'
-                  : '⚠ Requires Google Custom Search API credentials'}
+                  : serpApiKey.trim()
+                  ? '✓ SerpAPI configured – searching kleinanzeigen.de'
+                  : '⚠ Requires Google Custom Search credentials or SerpAPI key'}
               </Text>
             </View>
             <Switch
