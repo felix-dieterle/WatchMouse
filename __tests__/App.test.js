@@ -168,6 +168,44 @@ describe('App Component', () => {
     expect(AsyncStorage.getItem).toHaveBeenCalled();
   });
 
+  test('should render search item with maxPrice of 0 without crashing', async () => {
+    AsyncStorage.getItem.mockImplementation((key) => {
+      if (key === 'searches') {
+        return Promise.resolve(JSON.stringify([
+          { id: '1', query: 'iPhone', maxPrice: 0, createdAt: new Date().toISOString() }
+        ]));
+      }
+      return Promise.resolve(null);
+    });
+
+    const { getByText } = render(<App />);
+
+    await waitFor(() => {
+      expect(getByText('iPhone')).toBeTruthy();
+      // maxPrice 0 should be displayed, not hidden
+      expect(getByText('Max: €0')).toBeTruthy();
+    });
+  });
+
+  test('should not show price when maxPrice is null', async () => {
+    AsyncStorage.getItem.mockImplementation((key) => {
+      if (key === 'searches') {
+        return Promise.resolve(JSON.stringify([
+          { id: '1', query: 'iPhone', maxPrice: null, createdAt: new Date().toISOString() }
+        ]));
+      }
+      return Promise.resolve(null);
+    });
+
+    const { getByText, queryByText } = render(<App />);
+
+    await waitFor(() => {
+      expect(getByText('iPhone')).toBeTruthy();
+      // maxPrice null should hide the price display
+      expect(queryByText(/Max: €/)).toBeNull();
+    });
+  });
+
   test('should open link when "Open Link" button is pressed', async () => {
     const { Linking } = require('react-native');
     

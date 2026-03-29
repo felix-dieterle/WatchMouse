@@ -442,7 +442,7 @@ function AppContent() {
     <View style={styles.searchItem}>
       <View style={styles.searchInfo}>
         <Text style={styles.searchQuery}>{item.query}</Text>
-        {item.maxPrice && (
+        {item.maxPrice != null && (
           <Text style={styles.searchPrice}>Max: €{item.maxPrice}</Text>
         )}
       </View>
